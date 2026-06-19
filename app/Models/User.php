@@ -12,10 +12,12 @@ use Illuminate\Notifications\Notifiable;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Spatie\Permission\Traits\HasRoles;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 
 #[Fillable(['name', 'email', 'password', 'institution_id'])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable
+class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, HasUuids, HasRoles;
@@ -36,5 +38,11 @@ class User extends Authenticatable
     public function institution()
     {
         return $this->belongsTo(Institution::class);
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        // Enforce that only users with at least one role can access the panel
+        return $this->roles()->count() > 0;
     }
 }
