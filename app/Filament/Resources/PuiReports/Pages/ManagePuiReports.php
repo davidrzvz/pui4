@@ -9,5 +9,10 @@ class ManagePuiReports extends ManageRecords
 {
     protected static string $resource = PuiReportResource::class;
 
-    // No header actions required
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            \App\Filament\Resources\PuiReports\Widgets\PuiReportStatsWidget::class,
+        ];
+    }
 }

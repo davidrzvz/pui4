@@ -23,6 +23,12 @@ class PuiReport extends Model
         'match_checked_at',
         'activated_at',
         'deactivated_at',
+        'government_sent_at',
+        'government_status',
+        'government_response',
+        'government_error',
+        'government_sent_by',
+        'sent_evidence',
         'is_test',
     ];
 
@@ -32,6 +38,9 @@ class PuiReport extends Model
         'match_checked_at' => 'datetime',
         'activated_at' => 'datetime',
         'deactivated_at' => 'datetime',
+        'government_sent_at' => 'datetime',
+        'government_response' => 'array',
+        'sent_evidence' => 'array',
         'is_test' => 'boolean',
     ];
 
@@ -53,5 +62,15 @@ class PuiReport extends Model
     public function matchChecks()
     {
         return $this->hasMany(PuiReportMatchCheck::class)->orderBy('created_at', 'desc');
+    }
+
+    public function governmentSentBy()
+    {
+        return $this->belongsTo(User::class, 'government_sent_by');
+    }
+
+    public function isClosed(): bool
+    {
+        return in_array($this->status, ['FINALIZADO', 'DESACTIVADO']) || $this->government_status === 'ENVIADO';
     }
 }

@@ -22,6 +22,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Builder;
+use App\Services\GovernmentApiService;
 // No Infolist imports needed for v5
 
 class PuiReportResource extends Resource
@@ -102,14 +103,32 @@ class PuiReportResource extends Resource
                     ->badge()
                     ->formatStateUsing(fn ($state) => match($state) {
                         'PENDIENTE_REVISION' => 'Pendiente de revisión',
+                        'FINALIZADO' => 'Finalizado',
                         'DESACTIVADO' => 'Desactivado por Gobierno',
                         default => $state,
                     })
                     ->color(fn ($state) => match($state) {
                         'PENDIENTE_REVISION' => 'warning',
-                        'DESACTIVADO' => 'danger',
+                        'FINALIZADO' => 'success',
+                        'DESACTIVADO' => 'gray',
                         default => 'gray',
                     }),
+                TextColumn::make('government_status')
+                    ->label('Estado Gobierno')
+                    ->badge()
+                    ->formatStateUsing(fn ($state) => match($state) {
+                        'PENDIENTE_ENVIO' => 'Pendiente envío',
+                        'ENVIADO' => 'Enviado',
+                        'ERROR_ENVIO' => 'Error envío',
+                        default => $state,
+                    })
+                    ->color(fn ($state) => match($state) {
+                        'PENDIENTE_ENVIO' => 'warning',
+                        'ENVIADO' => 'success',
+                        'ERROR_ENVIO' => 'danger',
+                        default => 'gray',
+                    }),
+                TextColumn::make('government_sent_at')->label('Fecha enviado Gobierno')->dateTime(),
                 TextColumn::make('match_status')
                     ->label('Coincidencia')
                     ->badge()
@@ -148,6 +167,13 @@ class PuiReportResource extends Resource
                         'COINCIDENCIA_SUGERIDA' => 'Coincidencia sugerida',
                         'SIN_COINCIDENCIA_SUGERIDA' => 'Sin coincidencia sugerida',
                     ]),
+                SelectFilter::make('government_status')
+                    ->label('Estado Gobierno')
+                    ->options([
+                        'PENDIENTE_ENVIO' => 'Pendiente envío',
+                        'ENVIADO' => 'Enviado',
+                        'ERROR_ENVIO' => 'Error envío',
+                    ]),
             ])
             ->recordActions([
                 ViewAction::make(),
@@ -155,7 +181,7 @@ class PuiReportResource extends Resource
                     ->label('Re-evaluar coincidencia')
                     ->icon(Heroicon::OutlinedArrowPath)
                     ->color('warning')
-                    ->visible(fn(PuiReport $record) => !auth()->user()->hasRole('AUDITOR') && $record->status !== 'DESACTIVADO')
+                    ->visible(fn(PuiReport $record) => !auth()->user()->hasRole('AUDITOR') && !$record->isClosed())
                     ->action(function (PuiReport $record) {
                         $clientRecord = ClientRecord::where('institution_id', $record->institution_id)
                             ->where('curp', $record->curp)
@@ -185,6 +211,52 @@ class PuiReportResource extends Resource
                             ->title('Re-evaluación completada')
                             ->success()
                             ->send();
+                    }),
+                Action::make('enviarCoincidencia')
+                    ->label('Enviar coincidencia a Gobierno')
+                    ->icon(Heroicon::OutlinedPaperAirplane)
+                    ->color('success')
+                    ->visible(fn(PuiReport $record) => !$record->isClosed() && $record->match_status === 'COINCIDENCIA_SUGERIDA' && in_array(auth()->user()->roles->first()->name ?? '', ['SUPER_ADMIN', 'ADMINISTRADOR', 'OPERADOR']))
+                    ->requiresConfirmation()
+                    ->action(function (PuiReport $record) {
+                        $service = app(GovernmentApiService::class);
+                        $success = $service->sendCoincidence($record);
+                        
+                        if ($success) {
+                            Notification::make()
+                                ->title('Coincidencia enviada a Gobierno correctamente')
+                                ->success()
+                                ->send();
+                        } else {
+                            Notification::make()
+                                ->title('Error al enviar coincidencia a Gobierno')
+                                ->body($record->government_error ?? 'Error desconocido')
+                                ->danger()
+                                ->send();
+                        }
+                    }),
+                Action::make('finalizarSinCoincidencia')
+                    ->label('Finalizar sin coincidencia')
+                    ->icon(Heroicon::OutlinedXCircle)
+                    ->color('danger')
+                    ->visible(fn(PuiReport $record) => !$record->isClosed() && in_array(auth()->user()->roles->first()->name ?? '', ['SUPER_ADMIN', 'ADMINISTRADOR', 'OPERADOR']))
+                    ->requiresConfirmation()
+                    ->action(function (PuiReport $record) {
+                        $service = app(GovernmentApiService::class);
+                        $success = $service->finishSearch($record);
+                        
+                        if ($success) {
+                            Notification::make()
+                                ->title('Búsqueda finalizada y notificada a Gobierno correctamente')
+                                ->success()
+                                ->send();
+                        } else {
+                            Notification::make()
+                                ->title('Error al finalizar búsqueda en Gobierno')
+                                ->body($record->government_error ?? 'Error desconocido')
+                                ->danger()
+                                ->send();
+                        }
                     })
             ])
             ->toolbarActions([

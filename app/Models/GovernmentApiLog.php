@@ -14,10 +14,11 @@ class GovernmentApiLog extends Model
         'institution_id',
         'endpoint',
         'method',
-        'status_code',
         'request_data',
         'response_data',
+        'status_code',
         'ip_address',
+        'operator_user_id',
     ];
 
     protected $casts = [
@@ -28,5 +29,10 @@ class GovernmentApiLog extends Model
     public function institution()
     {
         return $this->belongsTo(Institution::class);
+    }
+
+    public function operator()
+    {
+        return $this->belongsTo(User::class, 'operator_user_id');
     }
 }
