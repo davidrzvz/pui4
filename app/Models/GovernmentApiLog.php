@@ -17,6 +17,7 @@ class GovernmentApiLog extends Model
         'status_code',
         'request_data',
         'response_data',
+        'ip_address',
     ];
 
     protected $casts = [

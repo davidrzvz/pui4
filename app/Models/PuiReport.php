@@ -12,14 +12,25 @@ class PuiReport extends Model
 
     protected $fillable = [
         'institution_id',
+        'client_record_id',
+        'curp',
+        'external_id',
         'status',
+        'match_status',
+        'matched_csv_import_batch_id',
         'request_payload',
         'response_payload',
+        'match_checked_at',
+        'activated_at',
+        'deactivated_at',
     ];
 
     protected $casts = [
         'request_payload' => 'array',
         'response_payload' => 'array',
+        'match_checked_at' => 'datetime',
+        'activated_at' => 'datetime',
+        'deactivated_at' => 'datetime',
     ];
 
     public function institution()
