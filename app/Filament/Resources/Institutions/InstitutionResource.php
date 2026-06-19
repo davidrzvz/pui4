@@ -5,17 +5,22 @@ namespace App\Filament\Resources\Institutions;
 use App\Filament\Resources\Institutions\Pages;
 use App\Models\Institution;
 use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\ViewAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
 use Illuminate\Database\Eloquent\Builder;
 
 class InstitutionResource extends Resource
 {
     protected static ?string $model = Institution::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-building-office-2';
     protected static ?string $navigationLabel = 'Instituciones';
     protected static ?string $modelLabel = 'Institución';
     protected static ?string $pluralModelLabel = 'Instituciones';
@@ -25,12 +30,12 @@ class InstitutionResource extends Resource
         return auth()->user()->hasRole('SUPER_ADMIN');
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\Section::make('Datos Principales')
-                    ->schema([
+        return $schema
+            ->components([
+                \Filament\Schemas\Components\Section::make('Datos Principales')
+                    ->components([
                         Forms\Components\TextInput::make('name')
                             ->label('Nombre de institución')
                             ->required()
@@ -43,12 +48,12 @@ class InstitutionResource extends Resource
                             ->extraInputAttributes(['style' => 'text-transform:uppercase'])
                             ->dehydrateStateUsing(fn ($state) => strtoupper($state)),
                         Forms\Components\Toggle::make('is_active')
-                            ->label('Activa/Inactiva')
+                            ->label('Activa')
                             ->default(true),
                     ]),
 
-                Forms\Components\Section::make('Credenciales PUI')
-                    ->schema([
+                \Filament\Schemas\Components\Section::make('Credenciales PUI')
+                    ->components([
                         Forms\Components\TextInput::make('pui_credentials.api_url')
                             ->label('URL base API Gobierno')
                             ->required()
@@ -104,12 +109,12 @@ class InstitutionResource extends Resource
             ->filters([
                 //
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
+            ->recordActions([
+                EditAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }

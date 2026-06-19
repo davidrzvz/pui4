@@ -5,17 +5,22 @@ namespace App\Filament\Resources\AuditLogs;
 use App\Filament\Resources\AuditLogs\Pages;
 use App\Models\AuditLog;
 use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\ViewAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
 use Illuminate\Database\Eloquent\Builder;
 
 class AuditLogResource extends Resource
 {
     protected static ?string $model = AuditLog::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-list';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-clipboard-document-list';
     protected static ?string $navigationLabel = 'Auditoría';
     protected static ?string $modelLabel = 'Registro de Auditoría';
     protected static ?string $pluralModelLabel = 'Registros de Auditoría';
@@ -52,10 +57,10 @@ class AuditLogResource extends Resource
         return $query->where('institution_id', $user->institution_id);
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 Forms\Components\TextInput::make('event')
                     ->label('Evento'),
                 Forms\Components\TextInput::make('auditable_type')
@@ -92,10 +97,10 @@ class AuditLogResource extends Resource
             ->filters([
                 //
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
+            ->recordActions([
+                ViewAction::make(),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 // Read only
             ]);
     }

@@ -17,6 +17,15 @@ class CsvImportBatch extends Model
         'status',
         'total_records',
         'processed_records',
+        'created_records',
+        'updated_records',
+        'failed_records',
+        'duplicate_records',
+        'error_summary',
+    ];
+
+    protected $casts = [
+        'error_summary' => 'array',
     ];
 
     public function institution()
