@@ -27,6 +27,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
+            ->brandName('PUI - Plataforma Única de Identificación')
             ->login()
             ->colors([
                 'primary' => Color::Amber,

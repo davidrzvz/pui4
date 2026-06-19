@@ -14,10 +14,12 @@ class Institution extends Model
         'rfc',
         'name',
         'pui_credentials',
+        'is_active',
     ];
 
     protected $casts = [
         'pui_credentials' => 'array',
+        'is_active' => 'boolean',
     ];
 
     public function users()
