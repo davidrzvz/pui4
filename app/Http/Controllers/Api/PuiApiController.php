@@ -108,10 +108,6 @@ class PuiApiController extends Controller
 
         $curp = strtoupper($request->curp);
 
-        if ($isTest) {
-            DB::beginTransaction();
-        }
-
         try {
             $clientRecord = ClientRecord::where('institution_id', $institution->id)
                 ->where('curp', $curp)
@@ -130,6 +126,7 @@ class PuiApiController extends Controller
                 'request_payload' => $request->all(),
                 'response_payload' => ['message' => 'La solicitud de activación del reporte de búsqueda se recibió correctamente.'],
                 'activated_at' => now(),
+                'is_test' => $isTest,
             ]);
 
             PuiReportMatchCheck::create([
@@ -149,16 +146,9 @@ class PuiApiController extends Controller
 
             $this->logApiCall($request, 200, $response, $institution->id);
 
-            if ($isTest) {
-                DB::rollBack();
-            }
-
             return response()->json($response, 200);
 
         } catch (\Exception $e) {
-            if ($isTest) {
-                DB::rollBack();
-            }
             $response = ['error' => 'Error al procesar el reporte', 'message' => $e->getMessage()];
             $this->logApiCall($request, 500, $response, $institution->id);
             return response()->json($response, 500);

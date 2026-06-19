@@ -23,6 +23,7 @@ class PuiReport extends Model
         'match_checked_at',
         'activated_at',
         'deactivated_at',
+        'is_test',
     ];
 
     protected $casts = [
@@ -31,10 +32,26 @@ class PuiReport extends Model
         'match_checked_at' => 'datetime',
         'activated_at' => 'datetime',
         'deactivated_at' => 'datetime',
+        'is_test' => 'boolean',
     ];
 
     public function institution()
     {
         return $this->belongsTo(Institution::class);
+    }
+
+    public function clientRecord()
+    {
+        return $this->belongsTo(ClientRecord::class);
+    }
+
+    public function csvImportBatch()
+    {
+        return $this->belongsTo(CsvImportBatch::class, 'matched_csv_import_batch_id');
+    }
+
+    public function matchChecks()
+    {
+        return $this->hasMany(PuiReportMatchCheck::class)->orderBy('created_at', 'desc');
     }
 }
