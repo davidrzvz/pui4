@@ -1,47 +1,55 @@
-FROM php:8.5-fpm
+FROM php:8.4-fpm
 
-# Install system dependencies
+# Install system dependencies and PHP extensions
 RUN apt-get update && apt-get install -y \
     git \
     curl \
-    libpng-dev \
-    libonig-dev \
-    libxml2-dev \
-    zip \
     unzip \
+    zip \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
     libzip-dev \
     libicu-dev \
-    mariadb-client
+    libonig-dev \
+    libxml2-dev \
+    default-mysql-client \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install \
+    pdo_mysql \
+    mbstring \
+    pcntl \
+    bcmath \
+    gd \
+    intl \
+    zip \
+    opcache \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Clear cache
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+# Redis
+RUN pecl install redis \
+    && docker-php-ext-enable redis
 
-# Install PHP extensions
-RUN docker-php-ext-configure intl
-RUN docker-php-ext-install pdo_mysql mbstring pcntl bcmath gd intl zip opcache
-
-# Install Redis extension
-RUN pecl install redis && docker-php-ext-enable redis
-
-# Install Composer
+# Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Install Node.js & NPM
+# Node 20
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs
+    && apt-get update \
+    && apt-get install -y nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
 WORKDIR /var/www/html
 
-# Copy application files
 COPY . /var/www/html/
 
-# Change owner
 RUN chown -R www-data:www-data /var/www/html
 
-# Ensure permissions
-RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+RUN mkdir -p storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
 
-# Expose port 9000 and start php-fpm server
 EXPOSE 9000
+
 CMD ["php-fpm"]
