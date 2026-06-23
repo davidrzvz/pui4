@@ -19,6 +19,72 @@
     $clientLabel = $record->clientRecord ? $record->clientRecord->internal_identifier : 'No se encontró coincidencia en el padrón actual';
     $batchLabel = $record->csvImportBatch ? $record->csvImportBatch->id : '';
     $evaluatedAt = $record->match_checked_at ? $record->match_checked_at->format('d/m/Y H:i') : '';
+
+    // Timeline events
+    $timeline = [];
+
+    // 1. Recepción
+    if ($record->created_at) {
+        $timeline[] = [
+            'date' => $record->created_at,
+            'icon' => '📥',
+            'title' => 'Reporte recibido desde Gobierno',
+            'description' => 'ID: ' . $record->external_id,
+        ];
+    }
+
+    // 2. Búsqueda
+    if ($record->match_checked_at) {
+        $timeline[] = [
+            'date' => $record->match_checked_at,
+            'icon' => '🤖',
+            'title' => 'Motor PUI ejecutó búsqueda automática',
+            'description' => 'Resultado: ' . ($record->match_status === 'COINCIDENCIA_SUGERIDA' ? 'COINCIDENCIA' : 'SIN COINCIDENCIA'),
+        ];
+    }
+
+    // 3. Comunicación con Gobierno
+    $govLogs = $record->governmentApiLogs()->latest()->get();
+    foreach ($govLogs as $log) {
+        $icon = $log->http_status >= 200 && $log->http_status < 300 ? '✅' : '⚠️';
+        $timeline[] = [
+            'date' => $log->created_at,
+            'icon' => '📤',
+            'title' => 'Comunicación con Gobierno: ' . $log->endpoint,
+            'description' => 'HTTP ' . $log->http_status . ' ' . $icon . ' - ' . $log->method,
+        ];
+    }
+
+    // 4. Auditoría (Acciones manuales)
+    if (\Illuminate\Support\Facades\Schema::hasColumn('audit_logs', 'auditable_type')) {
+        $auditLogs = \App\Models\AuditLog::where('auditable_type', \App\Models\PuiReport::class)
+            ->where('auditable_id', $record->id)
+            ->with('user')
+            ->get();
+            
+        foreach ($auditLogs as $log) {
+            $timeline[] = [
+                'date' => $log->created_at,
+                'icon' => '👤',
+                'title' => 'Acción manual: ' . ($log->event ?? 'Desconocida'),
+                'description' => 'Por: ' . ($log->user ? $log->user->name : 'Sistema'),
+            ];
+        }
+    }
+
+    // 5. Desactivación
+    if ($record->status === 'DESACTIVADO' && $record->deactivated_at) {
+        $timeline[] = [
+            'date' => $record->deactivated_at,
+            'icon' => '🔒',
+            'title' => 'Gobierno desactivó reporte',
+            'description' => 'El registro fue marcado como inactivo.',
+        ];
+    }
+
+    usort($timeline, function($a, $b) {
+        return $a['date'] <=> $b['date'];
+    });
 @endphp
 
 <div class="space-y-6">
@@ -97,5 +163,22 @@
                 @endforeach
             </div>
         @endif
+    </div>
+
+    <!-- Timeline de Auditoría -->
+    <div class="p-6 bg-white dark:bg-gray-900 rounded-xl shadow-sm ring-1 ring-gray-950/5 dark:ring-white/10">
+        <h2 class="text-lg font-medium tracking-tight text-gray-950 dark:text-white mb-4">Historial de actividad (Auditoría PUI)</h2>
+        <div class="relative border-l border-gray-200 dark:border-gray-700 ml-3">
+            @foreach($timeline as $event)
+                <div class="mb-6 ml-6">
+                    <span class="absolute flex items-center justify-center w-8 h-8 bg-gray-100 rounded-full -left-4 ring-4 ring-white dark:ring-gray-900 dark:bg-gray-700 text-lg">
+                        {{ $event['icon'] }}
+                    </span>
+                    <h3 class="flex items-center mb-1 text-md font-semibold text-gray-900 dark:text-white">{{ $event['title'] }}</h3>
+                    <time class="block mb-2 text-sm font-normal leading-none text-gray-400 dark:text-gray-500">{{ $event['date']->format('d/m/Y H:i:s') }}</time>
+                    <p class="mb-4 text-sm font-normal text-gray-500 dark:text-gray-400">{!! nl2br(e($event['description'])) !!}</p>
+                </div>
+            @endforeach
+        </div>
     </div>
 </div>

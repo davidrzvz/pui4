@@ -381,11 +381,28 @@ class PuiReportResource extends Resource
                                             ->maxLength(50),
                                     ])->columns(2)->collapsed(),
 
-                                Section::make('Confirmación de envío')
+                                Section::make('Confirmación final')
                                     ->schema([
-                                        Placeholder::make('advertencia')
-                                            ->label('')
-                                            ->content(new HtmlString('<div class="text-warning-600 bg-warning-50 p-4 rounded-lg"><strong>Aviso:</strong> Esta acción notificará una coincidencia al Gobierno mediante el endpoint 7.2. Verifique que la información sea correcta.</div>')),
+                                        Placeholder::make('resumen_final')
+                                            ->label('Confirmar envío oficial a Gobierno')
+                                            ->content(function ($get) {
+                                                $nombreCompleto = trim($get('nombre') . ' ' . $get('primer_apellido') . ' ' . $get('segundo_apellido'));
+                                                return new \Illuminate\Support\HtmlString(
+                                                    '<div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm space-y-2">' .
+                                                    '<p class="text-warning-600 dark:text-warning-400 font-semibold mb-3">Está a punto de notificar una coincidencia mediante el endpoint 7.2. Verifique que la información sea correcta antes de continuar.</p>' .
+                                                    '<p><strong>CURP:</strong> ' . ($get('curp') ?: 'N/A') . '</p>' .
+                                                    '<p><strong>Nombre completo:</strong> ' . ($nombreCompleto ?: 'N/A') . '</p>' .
+                                                    '<p><strong>ID reporte Gobierno:</strong> ' . ($get('id') ?: 'N/A') . '</p>' .
+                                                    '<p><strong>Institución:</strong> ' . ($get('institucion_id') ?: 'N/A') . '</p>' .
+                                                    '<p><strong>Fase búsqueda:</strong> Fase ' . ($get('fase_busqueda') ?: 'N/A') . '</p>' .
+                                                    '</div>'
+                                                );
+                                            }),
+                                        \Filament\Forms\Components\Checkbox::make('confirmar_envio')
+                                            ->label('Confirmo que la información es correcta y deseo notificar a Gobierno.')
+                                            ->accepted()
+                                            ->required()
+                                            ->dehydrated(false),
                                     ]),
                             ])
                             ->action(function (PuiReport $record, array $data) {
@@ -411,6 +428,7 @@ class PuiReportResource extends Resource
                             ->color('danger')
                             ->visible(fn(PuiReport $record) => !$record->isClosed() && in_array(auth()->user()->roles->first()->name ?? '', ['SUPER_ADMIN', 'ADMINISTRADOR', 'OPERADOR']))
                             ->requiresConfirmation()
+                            ->modalDescription('Esta acción notificará al Gobierno que la solicitud finalizó sin coincidencia. Esta acción quedará registrada en auditoría.')
                             ->action(function (PuiReport $record) {
                                 $service = app(GovernmentApiService::class);
                                 $success = $service->finishSearch($record);
@@ -439,7 +457,7 @@ class PuiReportResource extends Resource
                     ->requiresConfirmation()
                     ->modalHeading('Finalizar solicitudes sin coincidencia')
                     ->modalDescription(fn (\Illuminate\Database\Eloquent\Collection $records) => new HtmlString(
-                        'Esta acción notificará al Gobierno que las solicitudes seleccionadas finalizaron sin coincidencia. No se enviará información de coincidencia.<br><br>' .
+                        'Esta acción notificará al Gobierno que las solicitudes seleccionadas finalizaron sin coincidencia. No se enviará información de coincidencia. <strong class="text-danger-600">Esta acción quedará registrada en auditoría.</strong><br><br>' .
                         '<strong>Total seleccionadas:</strong> ' . $records->count() . '<br>' .
                         '<strong>Válidas para finalizar:</strong> ' . $records->filter(fn ($r) => 
                             $r->match_status === 'SIN_COINCIDENCIA_SUGERIDA'

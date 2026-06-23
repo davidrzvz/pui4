@@ -15,7 +15,7 @@ use Spatie\Permission\Traits\HasRoles;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 
-#[Fillable(['name', 'email', 'password', 'institution_id'])]
+#[Fillable(['name', 'email', 'password', 'institution_id', 'last_login_at', 'is_active'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
 {
@@ -42,7 +42,7 @@ class User extends Authenticatable implements FilamentUser
 
     public function canAccessPanel(Panel $panel): bool
     {
-        // Enforce that only users with at least one role can access the panel
-        return $this->roles()->count() > 0;
+        // Enforce that only users with at least one role can access the panel and are active
+        return $this->roles()->count() > 0 && $this->is_active;
     }
 }

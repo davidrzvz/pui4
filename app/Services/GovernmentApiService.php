@@ -142,17 +142,17 @@ class GovernmentApiService
             $response = Http::withToken($token)->timeout(15)->post($endpoint, $payload);
             $responseData = $response->json() ?? ['raw' => $response->body()];
             
-            $this->logApiCall($institution->id, $endpoint, 'POST', $payload, $responseData, $response->status(), $operatorUserId);
+            $this->logApiCall($institution->id, $endpoint, 'POST', $payload, $responseData, $response->status(), $operatorUserId, $report->id);
 
             // Registrar evento de auditoría específico para notificar coincidencia
             try {
                 \App\Models\AuditLog::create([
                     'institution_id' => $institution->id,
                     'user_id' => $operatorUserId,
-                    'action' => 'pui_report_notificar_coincidencia',
-                    'entity_type' => 'PuiReport',
-                    'entity_id' => $report->id,
-                    'details' => [
+                    'event' => 'pui_report_notificar_coincidencia',
+                    'auditable_type' => \App\Models\PuiReport::class,
+                    'auditable_id' => $report->id,
+                    'new_values' => [
                         'payload' => $payload,
                         'response' => $responseData,
                         'status_code' => $response->status(),
@@ -193,7 +193,7 @@ class GovernmentApiService
                 return false;
             }
         } catch (\Exception $e) {
-            $this->logApiCall($institution->id, $endpoint, 'POST', $payload, ['error' => $e->getMessage()], 500, $operatorUserId);
+            $this->logApiCall($institution->id, $endpoint, 'POST', $payload, ['error' => $e->getMessage()], 500, $operatorUserId, $report->id);
             $this->markReportError($report, 'Exception: ' . $e->getMessage());
             return false;
         }
@@ -231,7 +231,7 @@ class GovernmentApiService
             $response = Http::withToken($token)->timeout(15)->post($endpoint, $payload);
             $responseData = $response->json() ?? ['raw' => $response->body()];
 
-            $this->logApiCall($institution->id, $endpoint, 'POST', $payload, $responseData, $response->status(), $operatorUserId);
+            $this->logApiCall($institution->id, $endpoint, 'POST', $payload, $responseData, $response->status(), $operatorUserId, $report->id);
 
             if ($response->successful()) {
                 $report->update([
@@ -262,7 +262,7 @@ class GovernmentApiService
                 return false;
             }
         } catch (\Exception $e) {
-            $this->logApiCall($institution->id, $endpoint, 'POST', $payload, ['error' => $e->getMessage()], 500, $operatorUserId);
+            $this->logApiCall($institution->id, $endpoint, 'POST', $payload, ['error' => $e->getMessage()], 500, $operatorUserId, $report->id);
             $this->markReportError($report, 'Exception: ' . $e->getMessage());
             return false;
         }
@@ -277,11 +277,12 @@ class GovernmentApiService
         ]);
     }
 
-    private function logApiCall($institutionId, $endpoint, $method, $requestData, $responseData, $statusCode, $operatorUserId = null)
+    private function logApiCall($institutionId, $endpoint, $method, $requestData, $responseData, $statusCode, $operatorUserId = null, $puiReportId = null)
     {
         try {
             GovernmentApiLog::create([
                 'institution_id' => $institutionId,
+                'pui_report_id' => $puiReportId,
                 'endpoint' => $endpoint,
                 'method' => $method,
                 'request_data' => $requestData,

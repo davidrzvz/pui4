@@ -59,6 +59,11 @@ class PuiReport extends Model
         return $this->belongsTo(CsvImportBatch::class, 'matched_csv_import_batch_id');
     }
 
+    public function governmentApiLogs()
+    {
+        return $this->hasMany(GovernmentApiLog::class);
+    }
+
     public function matchChecks()
     {
         return $this->hasMany(PuiReportMatchCheck::class)->orderBy('created_at', 'desc');

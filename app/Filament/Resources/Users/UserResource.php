@@ -84,6 +84,9 @@ class UserResource extends Resource
                     ->preload()
                     ->searchable()
                     ->required(),
+                Forms\Components\Toggle::make('is_active')
+                    ->label('Activo')
+                    ->default(true),
             ]);
     }
 
@@ -104,6 +107,18 @@ class UserResource extends Resource
                 Tables\Columns\TextColumn::make('roles.name')
                     ->label('Rol')
                     ->badge(),
+                Tables\Columns\IconColumn::make('is_active')
+                    ->label('Estado')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-check-circle')
+                    ->falseIcon('heroicon-o-x-circle')
+                    ->trueColor('success')
+                    ->falseColor('danger'),
+                Tables\Columns\TextColumn::make('last_login_at')
+                    ->label('Último acceso')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Fecha creación')
                     ->dateTime()

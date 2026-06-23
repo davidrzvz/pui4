@@ -12,6 +12,7 @@ class GovernmentApiLog extends Model
 
     protected $fillable = [
         'institution_id',
+        'pui_report_id',
         'endpoint',
         'method',
         'request_data',
@@ -34,5 +35,10 @@ class GovernmentApiLog extends Model
     public function operator()
     {
         return $this->belongsTo(User::class, 'operator_user_id');
+    }
+
+    public function puiReport()
+    {
+        return $this->belongsTo(PuiReport::class);
     }
 }
