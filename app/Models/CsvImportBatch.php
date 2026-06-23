@@ -15,12 +15,14 @@ class CsvImportBatch extends Model
         'user_id',
         'filename',
         'status',
+        'import_mode',
         'total_records',
         'processed_records',
         'created_records',
         'updated_records',
         'failed_records',
         'duplicate_records',
+        'deactivated_records',
         'error_summary',
     ];
 

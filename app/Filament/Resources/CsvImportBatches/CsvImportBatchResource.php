@@ -29,12 +29,12 @@ class CsvImportBatchResource extends Resource
 
     public static function canAccess(): bool
     {
-        return auth()->user()->hasAnyRole(['SUPER_ADMIN', 'ADMINISTRADOR', 'AUDITOR']);
+        return auth()->user()->hasAnyRole(['SUPER_ADMIN', 'ADMINISTRADOR', 'OPERADOR', 'AUDITOR']);
     }
 
     public static function canCreate(): bool
     {
-        return auth()->user()->hasAnyRole(['SUPER_ADMIN', 'ADMINISTRADOR']);
+        return auth()->user()->hasAnyRole(['SUPER_ADMIN', 'ADMINISTRADOR', 'OPERADOR']);
     }
 
     public static function canEdit(Model $record): bool
@@ -73,13 +73,34 @@ class CsvImportBatchResource extends Resource
                     ->disabled(fn () => !$user->hasRole('SUPER_ADMIN'))
                     ->dehydrated(),
                 
+                Forms\Components\Radio::make('import_mode')
+                    ->label('Tipo de carga')
+                    ->options([
+                        'append' => 'Aumentar padrón actual',
+                        'replace' => 'Reemplazar padrón completo',
+                    ])
+                    ->descriptions([
+                        'append' => 'Agrega nuevos clientes y actualiza existentes. No desactiva registros previos.',
+                        'replace' => 'Este archivo será considerado el padrón completo vigente. Los clientes que no estén en el CSV quedarán inactivos.',
+                    ])
+                    ->default('append')
+                    ->required()
+                    ->live(),
+
+                Forms\Components\Checkbox::make('confirm_replace')
+                    ->label('Confirmo que este archivo representa el 100% del padrón actual.')
+                    ->required(fn ($get) => $get('import_mode') === 'replace')
+                    ->visible(fn ($get) => $get('import_mode') === 'replace')
+                    ->dehydrated(false),
+
                 Forms\Components\FileUpload::make('filename')
                     ->label('Archivo CSV')
                     ->acceptedFileTypes(['text/csv', 'text/plain'])
                     ->disk('public')
                     ->directory('csv_imports')
                     ->required()
-                    ->columnSpanFull(),
+                    ->columnSpanFull()
+                    ->helperText('Al finalizar la importación, PUI analizará nuevamente las solicitudes abiertas del Gobierno.'),
                     
                 Forms\Components\KeyValue::make('error_summary')
                     ->label('Resumen de Errores')
@@ -114,6 +135,13 @@ class CsvImportBatchResource extends Resource
                         'success' => 'COMPLETADO',
                         'danger' => 'ERROR',
                     ]),
+                Tables\Columns\BadgeColumn::make('import_mode')
+                    ->label('Tipo de carga')
+                    ->colors([
+                        'primary' => 'append',
+                        'danger' => 'replace',
+                    ])
+                    ->formatStateUsing(fn ($state) => $state === 'append' ? 'Aumentar' : 'Reemplazar'),
                 Tables\Columns\TextColumn::make('total_records')
                     ->label('Total'),
                 Tables\Columns\TextColumn::make('processed_records')

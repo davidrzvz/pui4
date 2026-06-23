@@ -66,7 +66,7 @@ class GovernmentApiService
     /**
      * Send coincidence notification to government API.
      */
-    public function sendCoincidence(PuiReport $report, ?string $operatorUserId = null): bool
+    public function sendCoincidence(PuiReport $report, ?string $operatorUserId = null, ?array $formData = null): bool
     {
         if ($report->government_status === 'ENVIADO') {
             throw new \Exception('Este reporte ya fue enviado al Gobierno');
@@ -82,32 +82,60 @@ class GovernmentApiService
             return false;
         }
 
+        if (!$formData) {
+            throw new \Exception('Datos del formulario no proporcionados para el endpoint 7.2');
+        }
+
         $credentials = $institution->pui_credentials;
         $apiUrl = rtrim($credentials['api_url'], '/');
         $endpoint = "{$apiUrl}/notificar-coincidencia";
 
-        $clientData = $report->clientRecord;
-        $requestPayload = is_array($report->request_payload) ? $report->request_payload : json_decode($report->request_payload, true);
-
-        // Mandatory fields from manual
         $payload = [
-            'id' => $report->external_id,
-            'curp' => $report->curp,
-            'institucion_id' => $institution->rfc,
-            'lugar_nacimiento' => $requestPayload['lugar_nacimiento'] ?? null,
-            'fase_busqueda' => '1',
+            'id' => $formData['id'],
+            'institucion_id' => $formData['institucion_id'],
+            'curp' => $formData['curp'],
+            'lugar_nacimiento' => $formData['lugar_nacimiento'],
+            'fase_busqueda' => $formData['fase_busqueda'],
+            'fecha_nacimiento' => $formData['fecha_nacimiento'] ?? null,
+            'sexo_asignado' => $formData['sexo_asignado'] ?? null,
+            'telefono' => $formData['telefono'] ?? null,
+            'correo' => $formData['correo'] ?? null,
+            'nombre_completo' => [
+                'nombre' => $formData['nombre'] ?? null,
+                'primer_apellido' => $formData['primer_apellido'] ?? null,
+                'segundo_apellido' => $formData['segundo_apellido'] ?? null,
+            ],
+            'domicilio' => [
+                'direccion' => $formData['direccion_persona'] ?? null,
+                'calle' => $formData['calle_persona'] ?? null,
+                'numero' => $formData['numero_persona'] ?? null,
+                'colonia' => $formData['colonia_persona'] ?? null,
+                'codigo_postal' => $formData['codigo_postal_persona'] ?? null,
+                'municipio_o_alcaldia' => $formData['municipio_persona'] ?? null,
+                'entidad_federativa' => $formData['entidad_persona'] ?? null,
+            ],
+            'tipo_evento' => $formData['tipo_evento'] ?? null,
+            'fecha_evento' => $formData['fecha_evento'] ?? null,
+            'descripcion_lugar_evento' => $formData['descripcion_lugar_evento'] ?? null,
+            'direccion_evento' => [
+                'direccion' => $formData['direccion_evento_desc'] ?? null,
+                'calle' => $formData['calle_evento'] ?? null,
+                'numero' => $formData['numero_evento'] ?? null,
+                'colonia' => $formData['colonia_evento'] ?? null,
+                'codigo_postal' => $formData['codigo_postal_evento'] ?? null,
+                'municipio_o_alcaldia' => $formData['municipio_evento'] ?? null,
+                'entidad_federativa' => $formData['entidad_evento'] ?? null,
+            ],
         ];
 
-        // Add client data if exists
-        if ($clientData) {
-            $payload = array_merge($payload, [
-                'nombre' => $clientData->first_name ?? null,
-                'primer_apellido' => $clientData->last_name ?? null,
-                'segundo_apellido' => $clientData->second_last_name ?? null,
-                'telefono' => $clientData->phone ?? null,
-                'correo' => $clientData->email ?? null,
-                'direccion' => $clientData->address ?? null,
-            ]);
+        if (!empty($formData['fotos'])) {
+            $payload['fotos'] = json_decode($formData['fotos'], true) ?? $formData['fotos'];
+            $payload['formato_fotos'] = $formData['formato_fotos'] ?? null;
+        }
+
+        if (!empty($formData['huellas'])) {
+            $payload['huellas'] = json_decode($formData['huellas'], true) ?? $formData['huellas'];
+            $payload['formato_huellas'] = $formData['formato_huellas'] ?? null;
         }
 
         try {
@@ -116,10 +144,29 @@ class GovernmentApiService
             
             $this->logApiCall($institution->id, $endpoint, 'POST', $payload, $responseData, $response->status(), $operatorUserId);
 
+            // Registrar evento de auditoría específico para notificar coincidencia
+            try {
+                \App\Models\AuditLog::create([
+                    'institution_id' => $institution->id,
+                    'user_id' => $operatorUserId,
+                    'action' => 'pui_report_notificar_coincidencia',
+                    'entity_type' => 'PuiReport',
+                    'entity_id' => $report->id,
+                    'details' => [
+                        'payload' => $payload,
+                        'response' => $responseData,
+                        'status_code' => $response->status(),
+                        'timestamp' => now()->toIso8601String(),
+                    ],
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Error registrando AuditLog para notificar coincidencia: ' . $e->getMessage());
+            }
+
             if ($response->successful()) {
                 $report->update([
                     'government_status' => 'ENVIADO',
-                    'status' => 'FINALIZADO',
+                    // NO cambiar status a FINALIZADO, se queda en el actual
                     'government_sent_at' => now(),
                     'government_sent_by' => $operatorUserId,
                     'government_response' => $responseData,
@@ -136,7 +183,8 @@ class GovernmentApiService
                         'institution_id' => $institution->rfc,
                         'government_status' => 'ENVIADO',
                         'government_response' => $responseData,
-                        'request_payload' => $requestPayload,
+                        'request_payload' => is_array($report->request_payload) ? $report->request_payload : json_decode($report->request_payload, true),
+                        'sent_payload' => $payload,
                     ],
                 ]);
                 return true;

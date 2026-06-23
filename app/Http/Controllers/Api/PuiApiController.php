@@ -85,9 +85,13 @@ class PuiApiController extends Controller
     {
         $institution = $request->attributes->get('institution');
 
+        if ($request->has('curp')) {
+            $request->merge(['curp' => strtoupper(trim($request->curp))]);
+        }
+
         $request->validate([
             'id' => 'required|string|min:36|max:75',
-            'curp' => ['required', 'string', 'size:18', 'regex:/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z\d]\d$/'],
+            'curp' => ['required', 'string', 'size:18', 'regex:/^[A-Z0-9]{18}$/'],
             'lugar_nacimiento' => 'present|nullable|string|max:20',
             'nombre' => 'nullable|string|max:50',
             'primer_apellido' => 'nullable|string|max:50',
@@ -104,9 +108,11 @@ class PuiApiController extends Controller
             'codigo_postal' => 'nullable|string|max:5',
             'municipio_o_alcaldia' => 'nullable|string|max:100',
             'entidad_federativa' => 'nullable|string|max:40',
+        ], [
+            'curp.regex' => 'CURP inválida. Debe contener exactamente 18 caracteres usando únicamente letras mayúsculas y números.',
         ]);
 
-        $curp = strtoupper($request->curp);
+        $curp = $request->curp;
 
         try {
             $clientRecord = ClientRecord::where('institution_id', $institution->id)

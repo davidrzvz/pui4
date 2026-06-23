@@ -15,6 +15,8 @@ class ClientRecord extends Model
         'csv_import_batch_id',
         'curp',
         'internal_identifier',
+        'name',
+        'is_active',
     ];
 
     public function institution()
@@ -30,5 +32,23 @@ class ClientRecord extends Model
     public function coincidenceReports()
     {
         return $this->hasMany(CoincidenceReport::class);
+    }
+
+    protected static function booted()
+    {
+        static::created(function ($record) {
+            self::runMatching($record, 'created');
+        });
+
+        static::updated(function ($record) {
+            self::runMatching($record, 'updated');
+        });
+    }
+
+    private static function runMatching($record, $event)
+    {
+        $service = app(\App\Services\PuiMatchingService::class);
+        $stats = $service->refreshPendingReports($record->institution_id);
+        request()->attributes->set('pui_matching_stats', $stats);
     }
 }

@@ -33,7 +33,9 @@ class CsvImportService
         $updatedRecords = 0;
         $failedRecords = 0;
         $duplicateRecords = 0;
+        $deactivatedRecords = 0;
         $errors = [];
+        $validCurps = [];
 
         $fileHandle = fopen($filePath, 'r');
         $header = fgetcsv($fileHandle);
@@ -83,10 +85,10 @@ class CsvImportService
                 }
 
                 // Regex CURP
-                if (!preg_match('/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z\d]\d$/', $curp)) {
+                if (!preg_match('/^[A-Z0-9]{18}$/', $curp)) {
                     $failedRecords++;
                     if (count($errors) < 100) {
-                        $errors[] = "Fila {$totalRecords}: CURP inválida ($curp).";
+                        $errors[] = "Fila {$totalRecords}: CURP inválida ($curp). Debe contener exactamente 18 caracteres usando únicamente letras mayúsculas y números.";
                     }
                     continue;
                 }
@@ -100,6 +102,7 @@ class CsvImportService
                     continue;
                 }
                 $processedCurpsInFile[$curp] = true;
+                $validCurps[] = $curp;
 
                 // Buscar en BD
                 $existing = ClientRecord::where('institution_id', $batch->institution_id)
@@ -110,6 +113,7 @@ class CsvImportService
                     $existing->update([
                         'internal_identifier' => $internalId,
                         'csv_import_batch_id' => $batch->id,
+                        'is_active' => true,
                     ]);
                     $updatedRecords++;
                     $processedRecords++;
@@ -119,10 +123,18 @@ class CsvImportService
                         'curp' => $curp,
                         'internal_identifier' => $internalId,
                         'csv_import_batch_id' => $batch->id,
+                        'is_active' => true,
                     ]);
                     $createdRecords++;
                     $processedRecords++;
                 }
+            }
+
+            if ($batch->import_mode === 'replace' && $processedRecords > 0) {
+                $deactivatedRecords = ClientRecord::where('institution_id', $batch->institution_id)
+                    ->whereNotIn('curp', $validCurps)
+                    ->where('is_active', true)
+                    ->update(['is_active' => false]);
             }
 
             DB::commit();
@@ -135,6 +147,7 @@ class CsvImportService
                 'updated_records' => $updatedRecords,
                 'failed_records' => $failedRecords,
                 'duplicate_records' => $duplicateRecords,
+                'deactivated_records' => $deactivatedRecords,
                 'error_summary' => !empty($errors) ? $errors : null,
             ]);
 
@@ -147,11 +160,13 @@ class CsvImportService
                 'auditable_id' => $batch->id,
                 'old_values' => null,
                 'new_values' => [
+                    'import_mode' => $batch->import_mode,
                     'total' => $totalRecords,
                     'created' => $createdRecords,
                     'updated' => $updatedRecords,
                     'failed' => $failedRecords,
                     'duplicates' => $duplicateRecords,
+                    'deactivated' => $deactivatedRecords,
                     'file' => $batch->filename,
                 ],
             ]);
@@ -164,6 +179,19 @@ class CsvImportService
             ]);
         } finally {
             fclose($fileHandle);
+        }
+
+        if ($batch->status === 'COMPLETADO') {
+            $service = app(\App\Services\PuiMatchingService::class);
+            $service->refreshPendingReports($batch->institution_id);
+
+            if (request()->routeIs('filament.*') || request()->is('admin/*')) {
+                \Filament\Notifications\Notification::make()
+                    ->title('Carga completada')
+                    ->body('El padrón fue actualizado. PUI ejecutará el proceso interno de búsqueda de coincidencias sobre las solicitudes abiertas.')
+                    ->success()
+                    ->send();
+            }
         }
     }
 }
