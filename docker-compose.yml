@@ -1,0 +1,113 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: pui-app
+    container_name: pui-app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    networks:
+      - pui-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:alpine
+    container_name: pui-nginx
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    volumes:
+      - ./:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - pui-network
+    depends_on:
+      app:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:80/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  mysql:
+    image: mysql:8.0
+    container_name: pui-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-pui}
+      MYSQL_USER: ${DB_USERNAME:-pui_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-pui_password}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-pui_password}
+    volumes:
+      - pui_mysql_data:/var/lib/mysql
+    networks:
+      - pui-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  redis:
+    image: redis:alpine
+    container_name: pui-redis
+    restart: unless-stopped
+    volumes:
+      - pui_redis_data:/data
+    networks:
+      - pui-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  queue:
+    image: pui-app
+    container_name: pui-queue
+    restart: unless-stopped
+    working_dir: /var/www/html
+    command: php artisan queue:work --sleep=3 --tries=3
+    volumes:
+      - ./:/var/www/html
+    networks:
+      - pui-network
+    depends_on:
+      app:
+        condition: service_started
+      redis:
+        condition: service_healthy
+
+  scheduler:
+    image: pui-app
+    container_name: pui-scheduler
+    restart: unless-stopped
+    working_dir: /var/www/html
+    command: sh -c "while true; do php artisan schedule:run --verbose --no-interaction & sleep 60; done"
+    volumes:
+      - ./:/var/www/html
+    networks:
+      - pui-network
+    depends_on:
+      app:
+        condition: service_started
+      redis:
+        condition: service_healthy
+
+networks:
+  pui-network:
+    driver: bridge
+
+volumes:
+  pui_mysql_data:
+  pui_redis_data:
