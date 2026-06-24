@@ -1,0 +1,15 @@
+services:
+  pui-manager:
+    build: .
+    container_name: pui-manager
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /home/aplicaciones/pui/clientes:/home/aplicaciones/pui/clientes
+      - /home/aplicaciones/pui/base:/home/aplicaciones/pui/base
+      - /home/aplicaciones/pui/backups:/home/aplicaciones/pui/backups
+      - ./data:/app/data
+    env_file:
+      - .env

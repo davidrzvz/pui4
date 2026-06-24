@@ -1,0 +1,76 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Crear Nueva Instancia PUI</h2>
+    <a href="/instances" class="btn btn-secondary">Volver</a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form action="/instances/create" method="POST" class="needs-validation" novalidate id="createForm">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="rfc" class="form-label">RFC</label>
+                    <input type="text" class="form-control bg-dark text-light border-secondary" id="rfc" name="rfc" required pattern="^[A-Z0-9]{12,13}$" placeholder="Ej. FCY2109104G4">
+                    <div class="invalid-feedback">Ingresa un RFC válido (12-13 caracteres alfanuméricos).</div>
+                </div>
+                <div class="col-md-6">
+                    <label for="company" class="form-label">Nombre de Empresa</label>
+                    <input type="text" class="form-control bg-dark text-light border-secondary" id="company" name="company" required placeholder="Ej. Mi Empresa S.A. de C.V.">
+                </div>
+                <div class="col-md-6">
+                    <label for="port" class="form-label">Puerto Interno Sugerido</label>
+                    <input type="number" class="form-control bg-dark text-light border-secondary" id="port" name="port" value="<%= nextPort %>" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="baseUrl" class="form-label">Base URL</label>
+                    <input type="url" class="form-control bg-dark text-light border-secondary" id="baseUrl" name="baseUrl" required value="http://192.168.1.10">
+                </div>
+                <div class="col-md-4">
+                    <label for="apiUser" class="form-label">Usuario API</label>
+                    <input type="text" class="form-control bg-dark text-light border-secondary" id="apiUser" name="apiUser" value="PUI" required>
+                </div>
+                <div class="col-md-4">
+                    <label for="apiPassword" class="form-label">Contraseña API</label>
+                    <input type="password" class="form-control bg-dark text-light border-secondary" id="apiPassword" name="apiPassword" required>
+                </div>
+                <div class="col-md-4">
+                    <label for="apiPasswordConfirm" class="form-label">Confirmar Contraseña API</label>
+                    <input type="password" class="form-control bg-dark text-light border-secondary" id="apiPasswordConfirm" required>
+                    <div class="invalid-feedback" id="passwordMatchError">Las contraseñas no coinciden.</div>
+                </div>
+            </div>
+            
+            <hr class="my-4 border-secondary">
+            
+            <button type="submit" class="btn btn-primary" id="submitBtn">
+                <i class="bi bi-play-circle me-1"></i> Crear Instancia
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.getElementById('createForm').addEventListener('submit', function(e) {
+        const pass = document.getElementById('apiPassword').value;
+        const confirm = document.getElementById('apiPasswordConfirm').value;
+        const confirmInput = document.getElementById('apiPasswordConfirm');
+        
+        if (pass !== confirm) {
+            e.preventDefault();
+            confirmInput.setCustomValidity('Invalid');
+            document.getElementById('passwordMatchError').style.display = 'block';
+        } else {
+            confirmInput.setCustomValidity('');
+            document.getElementById('passwordMatchError').style.display = 'none';
+        }
+        
+        if (this.checkValidity()) {
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('submitBtn').innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Creando... puede tomar varios minutos';
+        }
+    });
+    
+    document.getElementById('apiPasswordConfirm').addEventListener('input', function() {
+        this.setCustomValidity('');
+        document.getElementById('passwordMatchError').style.display = 'none';
+    });
+</script>

@@ -1,0 +1,19 @@
+<div class="container d-flex justify-content-center align-items-center h-100 mt-5">
+    <div class="card p-4 shadow-lg" style="width: 100%; max-width: 400px;">
+        <div class="text-center mb-4">
+            <h2 class="text-primary fw-bold">PUI Manager</h2>
+            <p class="text-muted">Inicia sesión para continuar</p>
+        </div>
+        <form action="/login" method="POST" class="needs-validation" novalidate>
+            <div class="mb-3">
+                <label for="username" class="form-label">Usuario</label>
+                <input type="text" class="form-control bg-dark text-light border-secondary" id="username" name="username" required>
+            </div>
+            <div class="mb-4">
+                <label for="password" class="form-label">Contraseña</label>
+                <input type="password" class="form-control bg-dark text-light border-secondary" id="password" name="password" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Ingresar</button>
+        </form>
+    </div>
+</div>

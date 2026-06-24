@@ -1,0 +1,90 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Instancias PUI</h2>
+    <a href="/instances/create" class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i> Nueva Instancia</a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>RFC</th>
+                        <th>Empresa</th>
+                        <th>Puerto</th>
+                        <th>Estado</th>
+                        <th>Último Backup</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (instances.length === 0) { %>
+                        <tr>
+                            <td colspan="6" class="text-center py-4">No hay instancias registradas.</td>
+                        </tr>
+                    <% } else { %>
+                        <% instances.forEach(instance => { %>
+                            <tr>
+                                <td class="align-middle fw-bold"><%= instance.rfc %></td>
+                                <td class="align-middle"><%= instance.company %></td>
+                                <td class="align-middle"><span class="badge bg-secondary"><%= instance.port %></span></td>
+                                <td class="align-middle">
+                                    <% if (instance.status === 'online') { %>
+                                        <span class="badge bg-success">Online</span>
+                                    <% } else { %>
+                                        <span class="badge bg-danger"><%= instance.status %></span>
+                                    <% } %>
+                                </td>
+                                <td class="align-middle">
+                                    <%= instance.last_backup ? new Date(instance.last_backup).toLocaleString() : 'Nunca' %>
+                                </td>
+                                <td class="align-middle">
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                            Acciones
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-dark">
+                                            <li><a class="dropdown-item" href="/instances/<%= instance.id %>/logs"><i class="bi bi-journal-text me-2"></i> Ver Logs</a></li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <form action="/instances/<%= instance.id %>/action" method="POST" class="d-inline">
+                                                    <input type="hidden" name="action" value="restart">
+                                                    <button type="submit" class="dropdown-item"><i class="bi bi-arrow-clockwise me-2"></i> Reiniciar Docker</button>
+                                                </form>
+                                            </li>
+                                            <li>
+                                                <form action="/instances/<%= instance.id %>/action" method="POST" class="d-inline">
+                                                    <input type="hidden" name="action" value="stop">
+                                                    <button type="submit" class="dropdown-item"><i class="bi bi-stop-circle me-2"></i> Detener</button>
+                                                </form>
+                                            </li>
+                                            <li>
+                                                <form action="/instances/<%= instance.id %>/action" method="POST" class="d-inline">
+                                                    <input type="hidden" name="action" value="start">
+                                                    <button type="submit" class="dropdown-item"><i class="bi bi-play-circle me-2"></i> Iniciar</button>
+                                                </form>
+                                            </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <form action="/instances/<%= instance.id %>/action" method="POST" class="d-inline" onsubmit="return confirm('¿Seguro que deseas actualizar desde GitHub? Esto podría tomar tiempo.');">
+                                                    <input type="hidden" name="action" value="update">
+                                                    <button type="submit" class="dropdown-item text-warning"><i class="bi bi-cloud-arrow-down me-2"></i> Actualizar de GitHub</button>
+                                                </form>
+                                            </li>
+                                            <li>
+                                                <form action="/instances/<%= instance.id %>/action" method="POST" class="d-inline" onsubmit="return confirm('¿Seguro que deseas crear un respaldo de la base de datos?');">
+                                                    <input type="hidden" name="action" value="backup">
+                                                    <button type="submit" class="dropdown-item text-info"><i class="bi bi-database-down me-2"></i> Crear Respaldo DB</button>
+                                                </form>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,83 @@
+<h2 class="mb-4">Dashboard</h2>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white h-100">
+            <div class="card-body">
+                <h5 class="card-title">Total Instancias</h5>
+                <h2 class="display-4"><%= stats.total %></h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white h-100">
+            <div class="card-body">
+                <h5 class="card-title">Instancias Online</h5>
+                <h2 class="display-4"><%= stats.online %></h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark h-100">
+            <div class="card-body">
+                <h5 class="card-title">Siguiente Puerto</h5>
+                <h2 class="display-4"><%= stats.nextPort %></h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white h-100">
+            <div class="card-body">
+                <h5 class="card-title">Accesos Rápidos</h5>
+                <div class="mt-3">
+                    <a href="/instances/create" class="btn btn-light btn-sm w-100 mb-2">Crear Instancia</a>
+                    <a href="/instances" class="btn btn-light btn-sm w-100">Ver Todas</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-dark text-white">
+        Últimas Instancias Creadas
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>RFC</th>
+                        <th>Empresa</th>
+                        <th>Puerto</th>
+                        <th>Estado</th>
+                        <th>Fecha Creación</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (recentInstances.length === 0) { %>
+                        <tr>
+                            <td colspan="5" class="text-center py-3">No hay instancias registradas.</td>
+                        </tr>
+                    <% } else { %>
+                        <% recentInstances.forEach(instance => { %>
+                            <tr>
+                                <td><%= instance.rfc %></td>
+                                <td><%= instance.company %></td>
+                                <td><%= instance.port %></td>
+                                <td>
+                                    <% if (instance.status === 'online') { %>
+                                        <span class="badge bg-success">Online</span>
+                                    <% } else { %>
+                                        <span class="badge bg-danger"><%= instance.status %></span>
+                                    <% } %>
+                                </td>
+                                <td><%= new Date(instance.created_at).toLocaleString() %></td>
+                            </tr>
+                        <% }) %>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

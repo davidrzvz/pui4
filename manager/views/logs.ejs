@@ -1,0 +1,19 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Logs: <%= instance.company %> (<%= instance.rfc %>)</h2>
+    <div>
+        <a href="/instances/<%= instance.id %>/logs?service=app" class="btn btn-outline-info btn-sm <%= service === 'app' ? 'active' : '' %>">App</a>
+        <a href="/instances/<%= instance.id %>/logs?service=nginx" class="btn btn-outline-info btn-sm <%= service === 'nginx' ? 'active' : '' %>">Nginx</a>
+        <a href="/instances/<%= instance.id %>/logs?service=mysql" class="btn btn-outline-info btn-sm <%= service === 'mysql' ? 'active' : '' %>">MySQL</a>
+        <a href="/instances" class="btn btn-secondary btn-sm ms-2">Volver</a>
+    </div>
+</div>
+
+<div class="card bg-dark text-light border-secondary">
+    <div class="card-header border-secondary d-flex justify-content-between">
+        <span>Docker Logs - <%= service %></span>
+        <button class="btn btn-sm btn-outline-light" onclick="window.location.reload()"><i class="bi bi-arrow-clockwise"></i> Refrescar</button>
+    </div>
+    <div class="card-body p-0">
+        <pre class="m-0 p-3" style="max-height: 500px; overflow-y: auto; background-color: #000; color: #0f0;"><%= logs %></pre>
+    </div>
+</div>
