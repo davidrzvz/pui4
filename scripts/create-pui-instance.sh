@@ -1,5 +1,6 @@
 #!/bin/bash
 set +H
+set -euo pipefail
 
 # Default values
 API_USER="PUI"
@@ -143,30 +144,34 @@ echo "Setting permissions..."
 docker compose exec app chown -R www-data:www-data storage bootstrap/cache
 docker compose exec app chmod -R 775 storage bootstrap/cache
 
+echo "Validating instance..."
+docker compose ps
+curl -fsS "http://localhost:${PORT}/admin/login" > /dev/null
+
 echo "---------------------------------------------------------"
-echo "Instancia creada exitosamente para \$COMPANY (\$RFC_UPPER)"
+echo "Instancia creada exitosamente para $COMPANY ($RFC_UPPER)"
 echo "---------------------------------------------------------"
 echo "Configuración a agregar manualmente en Nginx Proxy Manager:"
 echo ""
 echo "Domain:"
-echo "\$(echo \$BASE_URL | awk -F/ '{print \$3}' | cut -d: -f1)"
+echo "$BASE_URL" | awk -F/ '{print $3}' | cut -d: -f1
 echo ""
 echo "Custom location:"
-echo "/\${RFC_UPPER}"
+echo "/${RFC_UPPER}"
 echo ""
 echo "Forward:"
-echo "http://192.168.1.10:\${PORT}"
+echo "http://192.168.1.10:${PORT}"
 echo ""
 echo "Advanced:"
-echo "location /\${RFC_UPPER}/ {"
-echo "    proxy_pass http://192.168.1.10:\${PORT}/;"
-echo "    proxy_set_header Host \\\$host;"
-echo "    proxy_set_header X-Real-IP \\\$remote_addr;"
-echo "    proxy_set_header X-Forwarded-For \\\$proxy_add_x_forwarded_for;"
-echo "    proxy_set_header X-Forwarded-Proto \\\$scheme;"
+echo "location /${RFC_UPPER}/ {"
+echo "    proxy_pass http://192.168.1.10:${PORT}/;"
+echo "    proxy_set_header Host \$host;"
+echo "    proxy_set_header X-Real-IP \$remote_addr;"
+echo "    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;"
+echo "    proxy_set_header X-Forwarded-Proto \$scheme;"
 echo "}"
 echo ""
-echo "location = /\${RFC_UPPER} {"
-echo "    return 301 /\${RFC_UPPER}/;"
+echo "location = /${RFC_UPPER} {"
+echo "    return 301 /${RFC_UPPER}/;"
 echo "}"
 echo "---------------------------------------------------------"

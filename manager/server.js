@@ -131,12 +131,25 @@ app.post('/instances/create', requireAuth, (req, res) => {
     exec(cmd, execOptions, (error, stdout, stderr) => {
         if (error) {
             console.error(`Error: ${error.message}`);
-            req.session.error = `Error al ejecutar script:\nMensaje:\n${error.message}\n\nSTDOUT:\n${stdout}\n\nSTDERR:\n${stderr}`;
+            req.session.error = `La instancia no fue creada correctamente. Revise logs.\n\nMensaje:\n${error.message}\n\nSTDOUT:\n${stdout}\n\nSTDERR:\n${stderr}`;
             return res.redirect('/instances/create');
         }
 
-        // Script succeeded, insert to DB
-        const stmt = db.prepare('INSERT INTO instances (rfc, company, port, install_path) VALUES (?, ?, ?, ?)');
+        const validationCmd = `
+            if [ ! -f "/home/aplicaciones/pui/clientes/${rfc.toUpperCase()}/docker-compose.yml" ]; then exit 1; fi
+            if ! docker ps | grep -q "pui-${rfc.toLowerCase()}-nginx"; then exit 1; fi
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://192.168.1.10:${port}/admin/login || echo "000")
+            if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "302" ]; then exit 1; fi
+        `;
+
+        exec(validationCmd, (valError) => {
+            if (valError) {
+                req.session.error = `La instancia no fue creada correctamente. Revise logs.\n\nSTDOUT:\n${stdout}\n\nSTDERR:\n${stderr}`;
+                return res.redirect('/instances/create');
+            }
+
+            // Script succeeded, insert to DB
+            const stmt = db.prepare('INSERT INTO instances (rfc, company, port, install_path) VALUES (?, ?, ?, ?)');
         stmt.run([rfc.toUpperCase(), company, port, installPath], (err) => {
             if (err) {
                 console.error(err);
@@ -147,6 +160,7 @@ app.post('/instances/create', requireAuth, (req, res) => {
             res.redirect('/instances');
         });
         stmt.finalize();
+        });
     });
 });
 
