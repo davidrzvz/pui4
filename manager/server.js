@@ -131,7 +131,7 @@ app.post('/instances/create', requireAuth, (req, res) => {
     exec(cmd, execOptions, (error, stdout, stderr) => {
         if (error) {
             console.error(`Error: ${error.message}`);
-            req.session.error = `Error al ejecutar script: ${error.message}\n${stderr}`;
+            req.session.error = `Error al ejecutar script:\nMensaje:\n${error.message}\n\nSTDOUT:\n${stdout}\n\nSTDERR:\n${stderr}`;
             return res.redirect('/instances/create');
         }
 
