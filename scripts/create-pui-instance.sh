@@ -135,7 +135,7 @@ docker compose exec app composer install --no-dev --optimize-autoloader
 echo "Generating app key..."
 docker compose exec app php artisan key:generate --force
 echo "Running migrations..."
-docker compose exec app php artisan migrate:fresh --seed
+docker compose exec app php artisan migrate:fresh --seed --force
 echo "Linking storage..."
 docker compose exec app php artisan storage:link
 echo "Optimizing app..."
