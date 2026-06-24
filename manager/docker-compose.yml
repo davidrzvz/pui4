@@ -10,5 +10,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - /home/aplicaciones/pui:/home/aplicaciones/pui
       - ./data:/app/data
+      - ~/.ssh:/root/.ssh:ro
+      - ~/.ssh:/home/node/.ssh:ro
     env_file:
       - .env
