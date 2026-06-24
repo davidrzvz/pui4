@@ -1,7 +1,7 @@
 FROM node:20-alpine
 
-# Install Docker CLI and other required tools (git, bash, openssl)
-RUN apk add --no-cache docker-cli docker-cli-compose git bash openssl openssh-client
+# Install Docker CLI and other required tools
+RUN apk add --no-cache docker-cli docker-cli-compose git bash curl openssl openssh-client
 
 RUN mkdir -p /root/.ssh && \
     ssh-keyscan github.com >> /root/.ssh/known_hosts && \
