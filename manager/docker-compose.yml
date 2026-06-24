@@ -4,6 +4,10 @@ services:
     container_name: pui-manager
     restart: unless-stopped
     user: "1000:1000"
+    group_add:
+      - "983"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "8080:8080"
     volumes:

@@ -148,7 +148,9 @@ docker compose exec app chmod -R 775 storage bootstrap/cache
 
 echo "Validating instance..."
 docker compose ps
-curl -fsS "http://localhost:${PORT}/admin/login" > /dev/null
+
+VALIDATION_HOST="${VALIDATION_HOST:-host.docker.internal}"
+curl -fsS "http://${VALIDATION_HOST}:${PORT}/admin/login" > /dev/null
 
 echo "---------------------------------------------------------"
 echo "Instancia creada exitosamente para $COMPANY ($RFC_UPPER)"
