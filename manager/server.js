@@ -42,7 +42,7 @@ app.use((req, res, next) => {
 // Auth Routes
 app.get('/login', (req, res) => {
     if (req.session.authenticated) return res.redirect('/');
-    res.render('layout', { body: '<%- include("login") %>', title: 'Login' });
+    res.render('login', { title: 'Login' });
 });
 
 app.post('/login', (req, res) => {
@@ -76,13 +76,8 @@ app.get('/', requireAuth, (req, res) => {
         }
 
         const recentInstances = rows.slice(0, 5);
-        
-        const bodyHtml = `
-            <%- include("dashboard", { stats: { total: ${total}, online: ${online}, nextPort: ${nextPort} }, recentInstances: ${JSON.stringify(recentInstances)} }) %>
-        `;
 
-        res.render('layout', { 
-            body: '<%- include("dashboard") %>', 
+        res.render('dashboard', { 
             stats: { total, online, nextPort },
             recentInstances,
             title: 'Dashboard' 
@@ -94,7 +89,7 @@ app.get('/', requireAuth, (req, res) => {
 app.get('/instances', requireAuth, (req, res) => {
     db.all('SELECT * FROM instances ORDER BY created_at DESC', (err, rows) => {
         if (err) return res.status(500).send('Error de BD');
-        res.render('layout', { body: '<%- include("list") %>', instances: rows, title: 'Instancias' });
+        res.render('list', { instances: rows, title: 'Instancias' });
     });
 });
 
@@ -105,7 +100,7 @@ app.get('/instances/create', requireAuth, (req, res) => {
         if (rows && rows.length > 0) {
             nextPort = Math.max(...rows.map(r => r.port)) + 1;
         }
-        res.render('layout', { body: '<%- include("create") %>', nextPort, title: 'Crear Instancia' });
+        res.render('create', { nextPort, title: 'Crear Instancia' });
     });
 });
 
@@ -233,7 +228,7 @@ app.get('/instances/:id/logs', requireAuth, (req, res) => {
 
         exec(cmd, { cwd }, (error, stdout, stderr) => {
             const logs = stdout || stderr || (error ? error.message : 'No hay logs');
-            res.render('layout', { body: '<%- include("logs") %>', logs, instance, service, title: 'Logs' });
+            res.render('logs', { logs, instance, service, title: 'Logs' });
         });
     });
 });
