@@ -12,9 +12,11 @@ bash scripts/create-pui-instance.sh \
   --company "Mi Empresa SA de CV" \
   --port 8082 \
   --base-url http://192.168.1.10 \
-  --api-password "TuPasswordSeguro123!" \
+  --api-password 'TestPui2026!*@82' \
   --api-user "PUI"
 ```
+
+> **Nota Importante:** Cuando se pasen contraseñas con caracteres especiales (`! * @ $ & # %` etc.) desde la terminal, es fundamental encerrar el valor entre comillas simples (`'`) en lugar de dobles (`"`) para evitar que la terminal expanda los caracteres antes de enviarlos al script.
 
 El script se encargará de:
 1. Crear el directorio `/home/aplicaciones/pui/clientes/{RFC}`.

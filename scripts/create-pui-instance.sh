@@ -1,4 +1,5 @@
 #!/bin/bash
+set +H
 
 # Default values
 API_USER="PUI"
@@ -63,13 +64,30 @@ fi
 DB_PASSWORD=$(openssl rand -hex 16)
 JWT_SECRET=$(openssl rand -base64 32)
 
-sedi "s|^APP_URL=.*|APP_URL=${BASE_URL}/${RFC_UPPER}|g" .env
-sedi "s|^ASSET_URL=.*|ASSET_URL=${BASE_URL}/${RFC_UPPER}|g" .env
-sedi "s|^APP_ENV=.*|APP_ENV=production|g" .env
-sedi "s|^APP_DEBUG=.*|APP_DEBUG=false|g" .env
-sedi "s|^DB_DATABASE=.*|DB_DATABASE=pui_${RFC_LOWER}|g" .env
-sedi "s|^DB_USERNAME=.*|DB_USERNAME=pui_${RFC_LOWER}|g" .env
-sedi "s|^DB_PASSWORD=.*|DB_PASSWORD=${DB_PASSWORD}|g" .env
+env_quote() {
+    local val="$1"
+    echo "'${val//\'/\'\\\'\'}'"
+}
+
+set_env() {
+    local key="$1"
+    local val="$2"
+    local qval=$(env_quote "$val")
+    
+    if grep -q "^${key}=" .env; then
+        awk -v k="$key" -v v="$qval" -F= 'BEGIN { OFS="=" } $1==k { $0 = k "=" v } { print }' .env > .env.tmp && mv .env.tmp .env
+    else
+        echo "${key}=${qval}" >> .env
+    fi
+}
+
+set_env "APP_URL" "${BASE_URL}/${RFC_UPPER}"
+set_env "ASSET_URL" "${BASE_URL}/${RFC_UPPER}"
+set_env "APP_ENV" "production"
+set_env "APP_DEBUG" "false"
+set_env "DB_DATABASE" "pui_${RFC_LOWER}"
+set_env "DB_USERNAME" "pui_${RFC_LOWER}"
+set_env "DB_PASSWORD" "${DB_PASSWORD}"
 
 # Add custom PUI variables if they don't exist
 grep -q "^PUI_INSTITUTION_NAME=" .env || echo "PUI_INSTITUTION_NAME=" >> .env
@@ -78,11 +96,11 @@ grep -q "^PUI_INBOUND_USER=" .env || echo "PUI_INBOUND_USER=" >> .env
 grep -q "^PUI_INBOUND_PASSWORD=" .env || echo "PUI_INBOUND_PASSWORD=" >> .env
 grep -q "^PUI_INBOUND_JWT_SECRET=" .env || echo "PUI_INBOUND_JWT_SECRET=" >> .env
 
-sedi "s|^PUI_INSTITUTION_NAME=.*|PUI_INSTITUTION_NAME=\"${COMPANY}\"|g" .env
-sedi "s|^PUI_INSTITUTION_RFC=.*|PUI_INSTITUTION_RFC=${RFC_UPPER}|g" .env
-sedi "s|^PUI_INBOUND_USER=.*|PUI_INBOUND_USER=${API_USER}|g" .env
-sedi "s|^PUI_INBOUND_PASSWORD=.*|PUI_INBOUND_PASSWORD=\"${API_PASSWORD}\"|g" .env
-sedi "s|^PUI_INBOUND_JWT_SECRET=.*|PUI_INBOUND_JWT_SECRET=${JWT_SECRET}|g" .env
+set_env "PUI_INSTITUTION_NAME" "${COMPANY}"
+set_env "PUI_INSTITUTION_RFC" "${RFC_UPPER}"
+set_env "PUI_INBOUND_USER" "${API_USER}"
+set_env "PUI_INBOUND_PASSWORD" "${API_PASSWORD}"
+set_env "PUI_INBOUND_JWT_SECRET" "${JWT_SECRET}"
 
 # 5. Generate docker-compose.yml
 sedi "s/container_name: pui-app/container_name: pui-${RFC_LOWER}-app/g" docker-compose.yml
