@@ -15,8 +15,8 @@ class Login extends BaseLogin
 
     public function getHeading(): string | Htmlable
     {
-        $institutionName = e(config('pui.institution_name', 'Institución no configurada'));
-        $institutionRfc = e(config('pui.institution_rfc', 'RFC no configurado'));
+        $institutionName = e(config('pui.institution_name', env('PUI_INSTITUTION_NAME', 'Institución no configurada')));
+        $institutionRfc = e(config('pui.institution_rfc', env('PUI_INSTITUTION_RFC', 'RFC no configurado')));
 
         return new HtmlString(<<<HTML
             <div class="mb-6">
