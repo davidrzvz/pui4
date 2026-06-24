@@ -82,8 +82,8 @@ set_env() {
     fi
 }
 
-set_env "APP_URL" "${BASE_URL}/${RFC_UPPER}"
-set_env "ASSET_URL" "${BASE_URL}/${RFC_UPPER}"
+set_env "APP_URL" "${BASE_URL}:${PORT}"
+set_env "ASSET_URL" "${BASE_URL}:${PORT}"
 set_env "APP_ENV" "production"
 set_env "APP_DEBUG" "false"
 set_env "DB_DATABASE" "pui_${RFC_LOWER}"
@@ -138,6 +138,8 @@ echo "Running migrations..."
 docker compose exec app php artisan migrate:fresh --seed --force
 echo "Linking storage..."
 docker compose exec app php artisan storage:link
+echo "Publishing Filament assets..."
+docker compose exec app php artisan filament:assets
 echo "Optimizing app..."
 docker compose exec app php artisan optimize:clear
 echo "Setting permissions..."
