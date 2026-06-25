@@ -1,83 +1,76 @@
 <%- include('partials/header') %>
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Instancias PUI</h2>
-    <a href="/instances/create" class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i> Nueva Instancia</a>
+    <h3 class="fw-bold mb-0">Instancias PUI</h3>
+    <a href="/instances/create" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i> Nueva Instancia</a>
 </div>
 
-<div class="card shadow-sm">
+<div class="card shadow-sm border-0">
     <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover table-striped mb-0">
-                <thead class="table-dark">
+        <div class="table-responsive" style="overflow: visible !important;">
+            <table class="table table-hover mb-0">
+                <thead>
                     <tr>
-                        <th>RFC</th>
+                        <th class="ps-4">RFC</th>
                         <th>Empresa</th>
-                        <th>Puerto</th>
+                        <th>Acceso</th>
                         <th>Estado</th>
                         <th>Último Backup</th>
-                        <th>Acciones</th>
+                        <th class="text-end pe-4">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     <% if (instances.length === 0) { %>
                         <tr>
-                            <td colspan="6" class="text-center py-4">No hay instancias registradas.</td>
+                            <td colspan="6" class="text-center py-5 text-muted">No hay instancias registradas.</td>
                         </tr>
                     <% } else { %>
                         <% instances.forEach(instance => { %>
                             <tr>
-                                <td class="align-middle fw-bold"><%= instance.rfc %></td>
+                                <td class="align-middle ps-4 fw-bold"><%= instance.rfc %></td>
                                 <td class="align-middle"><%= instance.company %></td>
-                                <td class="align-middle"><span class="badge bg-secondary"><%= instance.port %></span></td>
+                                <td class="align-middle">
+                                    <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-25 mb-1 d-inline-block">Puerto: <%= instance.port %></span>
+                                    <br>
+                                    <a href="http://192.168.1.10:<%= instance.port %>/admin/login" target="_blank" class="text-decoration-none text-accent" style="font-size: 0.8rem;"><i class="bi bi-box-arrow-up-right me-1"></i>Abrir Panel</a>
+                                </td>
                                 <td class="align-middle">
                                     <% if (instance.status === 'online') { %>
-                                        <span class="badge bg-success">Online</span>
+                                        <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25"><i class="bi bi-circle-fill" style="font-size: 0.4rem; vertical-align: middle; margin-right: 4px;"></i> Online</span>
                                     <% } else { %>
-                                        <span class="badge bg-danger"><%= instance.status %></span>
+                                        <span class="badge bg-danger bg-opacity-25 text-danger border border-danger border-opacity-25"><i class="bi bi-circle-fill" style="font-size: 0.4rem; vertical-align: middle; margin-right: 4px;"></i> Offline</span>
                                     <% } %>
                                 </td>
-                                <td class="align-middle">
+                                <td class="align-middle text-muted" style="font-size: 0.85rem;">
                                     <%= instance.last_backup ? new Date(instance.last_backup).toLocaleString() : 'Nunca' %>
                                 </td>
-                                <td class="align-middle">
+                                <td class="align-middle text-end pe-4">
                                     <div class="dropdown">
-                                        <button class="btn btn-sm btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                            Acciones
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-boundary="window">
+                                            Administrar
                                         </button>
-                                        <ul class="dropdown-menu dropdown-menu-dark">
-                                            <li><a class="dropdown-item" href="/instances/<%= instance.id %>/logs"><i class="bi bi-journal-text me-2"></i> Ver Logs</a></li>
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li>
-                                                <form action="/instances/<%= instance.id %>/action" method="POST" class="d-inline">
-                                                    <input type="hidden" name="action" value="restart">
-                                                    <button type="submit" class="dropdown-item"><i class="bi bi-arrow-clockwise me-2"></i> Reiniciar Docker</button>
-                                                </form>
-                                            </li>
-                                            <li>
-                                                <form action="/instances/<%= instance.id %>/action" method="POST" class="d-inline">
-                                                    <input type="hidden" name="action" value="stop">
-                                                    <button type="submit" class="dropdown-item"><i class="bi bi-stop-circle me-2"></i> Detener</button>
-                                                </form>
-                                            </li>
-                                            <li>
-                                                <form action="/instances/<%= instance.id %>/action" method="POST" class="d-inline">
-                                                    <input type="hidden" name="action" value="start">
-                                                    <button type="submit" class="dropdown-item"><i class="bi bi-play-circle me-2"></i> Iniciar</button>
-                                                </form>
-                                            </li>
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li>
-                                                <form action="/instances/<%= instance.id %>/action" method="POST" class="d-inline" onsubmit="return confirm('¿Seguro que deseas actualizar desde GitHub? Esto podría tomar tiempo.');">
-                                                    <input type="hidden" name="action" value="update">
-                                                    <button type="submit" class="dropdown-item text-warning"><i class="bi bi-cloud-arrow-down me-2"></i> Actualizar de GitHub</button>
-                                                </form>
-                                            </li>
-                                            <li>
-                                                <form action="/instances/<%= instance.id %>/action" method="POST" class="d-inline" onsubmit="return confirm('¿Seguro que deseas crear un respaldo de la base de datos?');">
-                                                    <input type="hidden" name="action" value="backup">
-                                                    <button type="submit" class="dropdown-item text-info"><i class="bi bi-database-down me-2"></i> Crear Respaldo DB</button>
-                                                </form>
-                                            </li>
+                                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
+                                            <li class="dropdown-header">Gestión</li>
+                                            <li><a class="dropdown-item" href="http://192.168.1.10:<%= instance.port %>/admin/login" target="_blank"><i class="bi bi-box-arrow-up-right text-primary"></i> Abrir panel</a></li>
+                                            <li><button class="dropdown-item btn-action" data-action="restart" data-rfc="<%= instance.rfc %>" data-method="POST"><i class="bi bi-arrow-clockwise text-warning"></i> Reiniciar instancia</button></li>
+                                            <li><button class="dropdown-item btn-action" data-action="stop" data-rfc="<%= instance.rfc %>" data-method="POST"><i class="bi bi-stop-circle text-secondary"></i> Detener instancia</button></li>
+                                            <li><button class="dropdown-item btn-action" data-action="start" data-rfc="<%= instance.rfc %>" data-method="POST"><i class="bi bi-play-circle text-success"></i> Iniciar instancia</button></li>
+                                            <li><button class="dropdown-item btn-action text-danger" data-action="delete" data-rfc="<%= instance.rfc %>" data-method="POST" data-confirm="true"><i class="bi bi-trash3-fill"></i> Eliminar instancia</button></li>
+                                            
+                                            <li><hr class="dropdown-divider border-secondary opacity-25"></li>
+                                            <li class="dropdown-header">Respaldos</li>
+                                            <li><button class="dropdown-item btn-action" data-action="backup-db" data-rfc="<%= instance.rfc %>" data-method="POST"><i class="bi bi-database-down text-info"></i> Respaldar base de datos</button></li>
+                                            <li><button class="dropdown-item btn-action" data-action="backup-files" data-rfc="<%= instance.rfc %>" data-method="POST"><i class="bi bi-file-earmark-zip text-info"></i> Respaldar archivos</button></li>
+                                            <li><button class="dropdown-item btn-action" data-action="backup-full" data-rfc="<%= instance.rfc %>" data-method="POST"><i class="bi bi-archive-fill text-info"></i> Respaldo completo</button></li>
+                                            
+                                            <li><hr class="dropdown-divider border-secondary opacity-25"></li>
+                                            <li class="dropdown-header">Monitoreo</li>
+                                            <li><button class="dropdown-item btn-action" data-action="logs" data-rfc="<%= instance.rfc %>" data-method="GET"><i class="bi bi-journal-text text-muted"></i> Ver logs en tiempo real</button></li>
+                                            <li><button class="dropdown-item btn-action" data-action="status" data-rfc="<%= instance.rfc %>" data-method="GET"><i class="bi bi-activity text-muted"></i> Estado de servicios</button></li>
+                                            <li><button class="dropdown-item btn-action" data-action="audits" data-rfc="<%= instance.rfc %>" data-method="GET"><i class="bi bi-shield-check text-muted"></i> Ver auditorías</button></li>
+                                            
+                                            <li><hr class="dropdown-divider border-secondary opacity-25"></li>
+                                            <li class="dropdown-header">Configuración</li>
+                                            <li><button class="dropdown-item btn-action" data-action="config" data-rfc="<%= instance.rfc %>" data-method="GET"><i class="bi bi-key-fill text-muted"></i> Ver credenciales API</button></li>
                                         </ul>
                                     </div>
                                 </td>
@@ -89,4 +82,85 @@
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const loader = document.getElementById('globalLoader');
+        const loaderText = document.getElementById('globalLoaderText');
+        const logsModal = new bootstrap.Modal(document.getElementById('logsModal'));
+        const logsContent = document.getElementById('logsModalContent');
+        const logsTitle = document.getElementById('logsModalTitle');
+
+        const showLoader = (msg) => {
+            loaderText.innerText = msg || 'Procesando...';
+            loader.style.display = 'flex';
+        };
+        const hideLoader = () => {
+            loader.style.display = 'none';
+        };
+        
+        const showResult = (title, content, isError = false) => {
+            logsTitle.innerText = title;
+            logsContent.innerText = typeof content === 'object' ? JSON.stringify(content, null, 2) : content;
+            logsContent.style.color = isError ? 'var(--danger)' : 'var(--text-muted)';
+            logsModal.show();
+        };
+
+        document.querySelectorAll('.btn-action').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const action = btn.dataset.action;
+                const rfc = btn.dataset.rfc;
+                const method = btn.dataset.method;
+                const needsConfirm = btn.dataset.confirm === 'true';
+
+                if (needsConfirm) {
+                    if (!confirm(`¿Estás seguro de que deseas ${action} la instancia ${rfc}?`)) return;
+                    if (action === 'delete') {
+                        if (!confirm('Esta acción es DESTRUCTIVA e IRREVERSIBLE. ¿Estás completamente seguro de eliminar bases de datos y archivos?')) return;
+                    }
+                }
+
+                showLoader(`Ejecutando ${action} en ${rfc}...`);
+                
+                try {
+                    const response = await fetch(`/instances/${rfc}/${action}`, {
+                        method: method,
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    });
+                    
+                    const data = await response.json();
+                    hideLoader();
+                    
+                    if (data.success) {
+                        if (action === 'delete') {
+                            alert('Instancia eliminada correctamente.');
+                            location.reload();
+                        } else if (['restart', 'start', 'stop'].includes(action)) {
+                            location.reload();
+                        } else if (action.startsWith('backup-')) {
+                            const filenames = data.files ? data.files.join('\\n') : data.filename;
+                            showResult('Respaldo Exitoso', `Mensaje: ${data.message}\\nArchivo(s):\\n${filenames}\\n\\nSTDOUT:\\n${data.stdout || ''}`);
+                        } else if (action === 'logs') {
+                            showResult('Logs de Servicios', data.logs);
+                        } else if (action === 'status') {
+                            showResult('Estado de Servicios Docker', data.status);
+                        } else if (action === 'config') {
+                            showResult('Credenciales y Configuración (Protegidas)', data.config);
+                        } else if (action === 'audits') {
+                            showResult('Auditorías', data.audits);
+                        }
+                    } else {
+                        showResult('Error en Operación', `Mensaje: ${data.error}\\nDetalles: ${data.details || ''}\\nSTDOUT: ${data.stdout || ''}\\nSTDERR: ${data.stderr || ''}`, true);
+                    }
+                } catch (err) {
+                    hideLoader();
+                    showResult('Error de Conexión', err.message, true);
+                }
+            });
+        });
+    });
+</script>
+
 <%- include('partials/footer') %>

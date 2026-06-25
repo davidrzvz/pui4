@@ -1,54 +1,67 @@
 <%- include('partials/header') %>
-<h2 class="mb-4">Dashboard</h2>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold mb-0">Visión General</h3>
+    <a href="/instances/create" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i> Nueva Instancia</a>
+</div>
 
-<div class="row g-4 mb-4">
+<div class="row g-4 mb-5">
     <div class="col-md-3">
-        <div class="card bg-primary text-white h-100">
-            <div class="card-body">
-                <h5 class="card-title">Total Instancias</h5>
-                <h2 class="display-4"><%= stats.total %></h2>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card bg-success text-white h-100">
-            <div class="card-body">
-                <h5 class="card-title">Instancias Online</h5>
-                <h2 class="display-4"><%= stats.online %></h2>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card bg-warning text-dark h-100">
-            <div class="card-body">
-                <h5 class="card-title">Siguiente Puerto</h5>
-                <h2 class="display-4"><%= stats.nextPort %></h2>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card bg-info text-white h-100">
-            <div class="card-body">
-                <h5 class="card-title">Accesos Rápidos</h5>
-                <div class="mt-3">
-                    <a href="/instances/create" class="btn btn-light btn-sm w-100 mb-2">Crear Instancia</a>
-                    <a href="/instances" class="btn btn-light btn-sm w-100">Ver Todas</a>
+        <div class="card h-100 border-0" style="background: linear-gradient(145deg, rgba(30,41,59,1) 0%, rgba(15,23,42,1) 100%);">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="text-muted mb-0 text-uppercase fw-bold" style="letter-spacing: 0.05em; font-size: 0.75rem;">Total Instancias</h6>
+                    <div class="bg-primary bg-opacity-10 text-primary rounded p-2 d-flex"><i class="bi bi-server"></i></div>
                 </div>
+                <h2 class="display-5 fw-bold mb-0"><%= stats.total %></h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100 border-0" style="background: linear-gradient(145deg, rgba(30,41,59,1) 0%, rgba(15,23,42,1) 100%);">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="text-muted mb-0 text-uppercase fw-bold" style="letter-spacing: 0.05em; font-size: 0.75rem;">En línea</h6>
+                    <div class="bg-success bg-opacity-10 text-success rounded p-2 d-flex"><i class="bi bi-check-circle-fill"></i></div>
+                </div>
+                <h2 class="display-5 fw-bold mb-0"><%= stats.online %></h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100 border-0" style="background: linear-gradient(145deg, rgba(30,41,59,1) 0%, rgba(15,23,42,1) 100%);">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="text-muted mb-0 text-uppercase fw-bold" style="letter-spacing: 0.05em; font-size: 0.75rem;">Detenidas / Offline</h6>
+                    <div class="bg-danger bg-opacity-10 text-danger rounded p-2 d-flex"><i class="bi bi-x-circle-fill"></i></div>
+                </div>
+                <h2 class="display-5 fw-bold mb-0"><%= stats.total - stats.online %></h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100 border-0" style="background: linear-gradient(145deg, rgba(30,41,59,1) 0%, rgba(15,23,42,1) 100%);">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="text-muted mb-0 text-uppercase fw-bold" style="letter-spacing: 0.05em; font-size: 0.75rem;">Próximo Puerto</h6>
+                    <div class="bg-info bg-opacity-10 text-info rounded p-2 d-flex"><i class="bi bi-door-open-fill"></i></div>
+                </div>
+                <h2 class="display-5 fw-bold mb-0"><%= stats.nextPort %></h2>
             </div>
         </div>
     </div>
 </div>
 
 <div class="card">
-    <div class="card-header bg-dark text-white">
-        Últimas Instancias Creadas
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="mb-0">Instancias Recientes</span>
+        <a href="/instances" class="btn btn-sm btn-outline-secondary" style="font-size: 0.75rem;">Ver Todas</a>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover table-striped mb-0">
-                <thead class="table-dark">
+            <table class="table table-hover mb-0">
+                <thead>
                     <tr>
-                        <th>RFC</th>
+                        <th class="ps-4">RFC</th>
                         <th>Empresa</th>
                         <th>Puerto</th>
                         <th>Estado</th>
@@ -58,22 +71,22 @@
                 <tbody>
                     <% if (recentInstances.length === 0) { %>
                         <tr>
-                            <td colspan="5" class="text-center py-3">No hay instancias registradas.</td>
+                            <td colspan="5" class="text-center py-4 text-muted">No hay instancias registradas.</td>
                         </tr>
                     <% } else { %>
                         <% recentInstances.forEach(instance => { %>
                             <tr>
-                                <td><%= instance.rfc %></td>
+                                <td class="ps-4 fw-semibold"><%= instance.rfc %></td>
                                 <td><%= instance.company %></td>
-                                <td><%= instance.port %></td>
+                                <td><span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-25"><%= instance.port %></span></td>
                                 <td>
                                     <% if (instance.status === 'online') { %>
-                                        <span class="badge bg-success">Online</span>
+                                        <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25"><i class="bi bi-circle-fill" style="font-size: 0.4rem; vertical-align: middle; margin-right: 4px;"></i> Online</span>
                                     <% } else { %>
-                                        <span class="badge bg-danger"><%= instance.status %></span>
+                                        <span class="badge bg-danger bg-opacity-25 text-danger border border-danger border-opacity-25"><i class="bi bi-circle-fill" style="font-size: 0.4rem; vertical-align: middle; margin-right: 4px;"></i> Offline</span>
                                     <% } %>
                                 </td>
-                                <td><%= new Date(instance.created_at).toLocaleString() %></td>
+                                <td class="text-muted"><%= new Date(instance.created_at).toLocaleDateString() %></td>
                             </tr>
                         <% }) %>
                     <% } %>
