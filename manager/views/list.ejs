@@ -2,6 +2,7 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h3 class="fw-bold mb-0">Instancias PUI</h3>
     <div>
+        <button class="btn btn-outline-warning me-2" id="btnUpdateAll"><i class="bi bi-cloud-arrow-up me-1"></i> Actualizar todas</button>
         <button class="btn btn-outline-info me-2" id="btnImportInstances"><i class="bi bi-cloud-arrow-down me-1"></i> Importar existentes</button>
         <a href="/instances/create" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i> Nueva Instancia</a>
     </div>
@@ -54,6 +55,7 @@
                                         <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
                                             <li class="dropdown-header">Gestión</li>
                                             <li><a class="dropdown-item" href="http://192.168.1.10:<%= instance.port %>/admin/login" target="_blank"><i class="bi bi-box-arrow-up-right text-primary"></i> Abrir panel</a></li>
+                                            <li><button class="dropdown-item btn-action" data-action="update-code" data-rfc="<%= instance.rfc %>" data-method="POST"><i class="bi bi-cloud-arrow-up text-primary"></i> Actualizar código</button></li>
                                             <li><button class="dropdown-item btn-action" data-action="restart" data-rfc="<%= instance.rfc %>" data-method="POST"><i class="bi bi-arrow-clockwise text-warning"></i> Reiniciar instancia</button></li>
                                             <li><button class="dropdown-item btn-action" data-action="stop" data-rfc="<%= instance.rfc %>" data-method="POST"><i class="bi bi-stop-circle text-secondary"></i> Detener instancia</button></li>
                                             <li><button class="dropdown-item btn-action" data-action="start" data-rfc="<%= instance.rfc %>" data-method="POST"><i class="bi bi-play-circle text-success"></i> Iniciar instancia</button></li>
@@ -189,6 +191,12 @@
                             location.reload();
                         } else if (['restart', 'start', 'stop'].includes(action)) {
                             location.reload();
+                        } else if (action === 'update-code') {
+                            const resData = data.details;
+                            let msg = `Éxito: ${resData.success}\\nCommit: ${resData.oldCommit} -> ${resData.newCommit}\\nDuración: ${resData.duration}s`;
+                            if (resData.error) msg += `\\nError: ${resData.error}`;
+                            msg += `\\n\\nLogs:\\n${resData.logs}`;
+                            showResult('Actualización de Código', msg, !resData.success);
                         } else if (action.startsWith('backup-')) {
                             const filenames = data.files ? data.files.join('\\n') : data.filename;
                             showResult('Respaldo Exitoso', `Mensaje: ${data.message}\\nArchivo(s):\\n${filenames}\\n\\nSTDOUT:\\n${data.stdout || ''}`);
@@ -202,7 +210,7 @@
                             showResult('Auditorías', data.audits);
                         }
                     } else {
-                        showResult('Error en Operación', `Mensaje: ${data.error}\\nDetalles: ${data.details || ''}\\nSTDOUT: ${data.stdout || ''}\\nSTDERR: ${data.stderr || ''}`, true);
+                        showResult('Error en Operación', `Mensaje: ${data.error}\\nDetalles: ${data.details ? JSON.stringify(data.details, null, 2) : ''}\\nSTDOUT: ${data.stdout || ''}\\nSTDERR: ${data.stderr || ''}`, true);
                     }
                 } catch (err) {
                     hideLoader();
@@ -268,6 +276,37 @@
                     if (data.imported > 0) location.reload();
                 } else {
                     showResult('Error en Importación', `Mensaje: ${data.error}`, true);
+                }
+            } catch (err) {
+                hideLoader();
+                showResult('Error de Conexión', err.message, true);
+            }
+        });
+
+        document.getElementById('btnUpdateAll').addEventListener('click', async () => {
+            if (!confirm('¿Estás seguro de que deseas actualizar el código de TODAS las instancias? Esta operación tardará varios minutos y se ejecutará una por una.')) return;
+            
+            showLoader('Actualizando todas las instancias (esto tardará un rato)...');
+            try {
+                const response = await fetch('/instances/update-all', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                hideLoader();
+                
+                if (data.success) {
+                    let summary = `Total instancias: ${data.total}\\nExitosas: ${data.successCount}\\nFallidas: ${data.failCount}\\n\\n`;
+                    data.results.forEach(r => {
+                        summary += `[${r.rfc}] ${r.success ? 'ÉXITO' : 'FALLO'} (${r.duration}s)\\n`;
+                        if (!r.success) summary += `   Error: ${r.error}\\n`;
+                    });
+                    showResult('Resumen de Actualización Masiva', summary, data.failCount > 0);
+                } else {
+                    showResult('Error Global', data.error, true);
                 }
             } catch (err) {
                 hideLoader();

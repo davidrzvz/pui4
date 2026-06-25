@@ -5,6 +5,9 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const { exec, execFile, spawn } = require('child_process');
 const fs = require('fs');
+const util = require('util');
+const execPromise = util.promisify(exec);
+const execFilePromise = util.promisify(execFile);
 const db = require('./database');
 
 const app = express();
@@ -630,6 +633,141 @@ app.post('/instances/:rfc/change-api-password', requireAuth, validateRfc, (req, 
             logAudit(instance.rfc, 'change_api_password', `Error FS: ${e.message}`);
             res.status(500).json({ success: false, error: 'Error al escribir .env', details: e.message });
         }
+    });
+});
+
+// --- UPDATE CODE ---
+const updateInstance = async (instance) => {
+    let logs = [];
+    let oldCommit = 'unknown';
+    let newCommit = 'unknown';
+    let isDown = false;
+    let success = false;
+    let errorMsg = '';
+    const startTime = Date.now();
+
+    const cwd = instance.install_path;
+
+    const runCmd = async (file, args, isDockerExec = false) => {
+        const cmdStr = `${file} ${args.join(' ')}`;
+        logs.push(`> ${cmdStr}`);
+        try {
+            const { stdout, stderr } = await execFilePromise(file, args, { cwd });
+            if (stdout) logs.push(stdout.trim());
+            if (stderr) logs.push(`[WARN/ERR] ${stderr.trim()}`);
+            return stdout.trim();
+        } catch (e) {
+            logs.push(`[FATAL] ${e.message}`);
+            if (e.stdout) logs.push(e.stdout.trim());
+            if (e.stderr) logs.push(`[STDERR] ${e.stderr.trim()}`);
+            throw e;
+        }
+    };
+
+    try {
+        if (!fs.existsSync(cwd)) throw new Error('El directorio de instalación no existe');
+
+        // 1. Get old commit
+        try {
+            oldCommit = await runCmd('git', ['rev-parse', '--short', 'HEAD']);
+        } catch (e) {
+            oldCommit = 'error';
+        }
+
+        // 2. Git fetch & reset
+        await runCmd('git', ['fetch', 'origin']);
+        await runCmd('git', ['reset', '--hard', 'origin/main']);
+
+        // 3. Get new commit
+        try {
+            newCommit = await runCmd('git', ['rev-parse', '--short', 'HEAD']);
+        } catch (e) {
+            newCommit = 'error';
+        }
+
+        // 4. Composer install
+        await runCmd('docker', ['compose', 'exec', '-T', 'app', 'composer', 'install', '--no-dev', '--optimize-autoloader']);
+
+        // 5. Artisan down
+        await runCmd('docker', ['compose', 'exec', '-T', 'app', 'php', 'artisan', 'down']);
+        isDown = true;
+
+        // 6. Artisan migrate
+        await runCmd('docker', ['compose', 'exec', '-T', 'app', 'php', 'artisan', 'migrate', '--force']);
+
+        // 7. Filament assets
+        await runCmd('docker', ['compose', 'exec', '-T', 'app', 'php', 'artisan', 'filament:assets']);
+
+        // 8. Optimize clear
+        await runCmd('docker', ['compose', 'exec', '-T', 'app', 'php', 'artisan', 'optimize:clear']);
+
+        // 9. Restart containers
+        await runCmd('docker', ['compose', 'restart', 'app', 'queue', 'scheduler', 'nginx']);
+
+        // 10. Artisan up
+        await runCmd('docker', ['compose', 'exec', '-T', 'app', 'php', 'artisan', 'up']);
+        isDown = false;
+
+        success = true;
+    } catch (err) {
+        errorMsg = err.message;
+        success = false;
+        
+        // Recover from maintenance mode if we failed after "down"
+        if (isDown) {
+            logs.push('>>> Intentando recuperar la instancia (artisan up)...');
+            try {
+                await runCmd('docker', ['compose', 'exec', '-T', 'app', 'php', 'artisan', 'up']);
+                logs.push('>>> Instancia recuperada del modo mantenimiento.');
+            } catch (upErr) {
+                logs.push(`[CRITICAL] No se pudo quitar el modo mantenimiento: ${upErr.message}`);
+            }
+        }
+    }
+
+    const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+    
+    // Log audit
+    const auditMsg = success 
+        ? `Éxito. Commit: ${oldCommit} -> ${newCommit}. Duración: ${duration}s.` 
+        : `Fallo. Commit: ${oldCommit} -> ${newCommit}. Duración: ${duration}s. Error: ${errorMsg}`;
+    
+    logAudit(instance.rfc, 'update_code', auditMsg);
+
+    return {
+        rfc: instance.rfc,
+        success,
+        oldCommit,
+        newCommit,
+        duration,
+        error: errorMsg,
+        logs: logs.join('\\n')
+    };
+};
+
+app.post('/instances/:rfc/update-code', requireAuth, validateRfc, async (req, res) => {
+    getInstanceByRfc(req.params.rfc, res, async (instance) => {
+        const result = await updateInstance(instance);
+        res.json({ success: result.success, details: result });
+    });
+});
+
+app.post('/instances/update-all', requireAuth, async (req, res) => {
+    db.all('SELECT * FROM instances ORDER BY rfc ASC', async (err, instances) => {
+        if (err) return res.status(500).json({ success: false, error: 'Error DB' });
+        
+        let results = [];
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const instance of instances) {
+            const resData = await updateInstance(instance);
+            results.push(resData);
+            if (resData.success) successCount++; else failCount++;
+        }
+
+        logAudit('GLOBAL', 'update_all', `Actualización masiva. Éxito: ${successCount}, Fallos: ${failCount}.`);
+        res.json({ success: true, total: instances.length, successCount, failCount, results });
     });
 });
 
