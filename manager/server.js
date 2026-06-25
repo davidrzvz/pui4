@@ -14,6 +14,7 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json());
 
 app.use(session({
     secret: process.env.SESSION_SECRET || 'pui-manager-secret-key-2026',
@@ -580,8 +581,14 @@ app.get('/monitoring/api/:rfc', requireAuth, validateRfc, (req, res) => {
 
 // --- API CREDENTIALS ---
 app.post('/instances/:rfc/change-api-password', requireAuth, validateRfc, (req, res) => {
-    const { newPassword } = req.body;
-    if (!newPassword || newPassword.length < 6) {
+    let password = req.body.password;
+    if (!password || typeof password !== 'string') {
+        console.warn(`[API Credentials] Solicitud sin password recibida para ${req.params.rfc}`);
+        return res.status(400).json({ success: false, error: 'La contraseña debe tener al menos 6 caracteres' });
+    }
+    
+    password = password.trim();
+    if (password.length < 6) {
         return res.status(400).json({ success: false, error: 'La contraseña debe tener al menos 6 caracteres' });
     }
 
@@ -595,9 +602,9 @@ app.post('/instances/:rfc/change-api-password', requireAuth, validateRfc, (req, 
             // API_PASSWORD could be plain or wrapped in quotes
             const regex = /^API_PASSWORD=.*$/m;
             if (regex.test(envContent)) {
-                envContent = envContent.replace(regex, `API_PASSWORD="${newPassword.replace(/"/g, '\\"')}"`);
+                envContent = envContent.replace(regex, `API_PASSWORD="${password.replace(/"/g, '\\"')}"`);
             } else {
-                envContent += `\nAPI_PASSWORD="${newPassword.replace(/"/g, '\\"')}"`;
+                envContent += `\nAPI_PASSWORD="${password.replace(/"/g, '\\"')}"`;
             }
             fs.writeFileSync(envPath, envContent);
             

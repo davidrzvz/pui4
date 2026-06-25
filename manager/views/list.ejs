@@ -227,7 +227,7 @@
                         'Accept': 'application/json',
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ newPassword })
+                    body: JSON.stringify({ password: newPassword })
                 });
                 
                 const data = await response.json();
