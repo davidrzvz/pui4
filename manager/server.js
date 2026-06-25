@@ -694,7 +694,8 @@ const updateInstance = async (instance) => {
             newCommit = 'error';
         }
 
-        // 4. Composer install
+        // 4. Configure git safe directory and Composer install
+        await runCmd('docker', ['compose', 'exec', '-T', 'app', 'git', 'config', '--global', '--add', 'safe.directory', '/var/www/html']);
         await runCmd('docker', ['compose', 'exec', '-T', 'app', 'composer', 'install', '--no-dev', '--optimize-autoloader']);
 
         // 5. Artisan down

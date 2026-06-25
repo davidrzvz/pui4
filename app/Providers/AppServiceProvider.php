@@ -43,6 +43,21 @@ class AppServiceProvider extends ServiceProvider
                 if (!config('app.asset_url')) {
                     config(['app.asset_url' => $appUrl]);
                 }
+
+                // FIX LIVEWIRE DUPLICATION BUG
+                \Illuminate\Support\Facades\Event::listen(\Illuminate\Foundation\Http\Events\RequestHandled::class, function ($event) use ($path) {
+                    $response = $event->response;
+                    if (method_exists($response, 'getContent') && method_exists($response, 'setContent')) {
+                        $content = $response->getContent();
+                        if (is_string($content)) {
+                            $duplicatedPath = $path . $path . '/livewire/';
+                            $correctPath = $path . '/livewire/';
+                            if (str_contains($content, $duplicatedPath)) {
+                                $response->setContent(str_replace($duplicatedPath, $correctPath, $content));
+                            }
+                        }
+                    }
+                });
             }
         }
     }
