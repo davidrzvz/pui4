@@ -667,6 +667,15 @@ const updateInstance = async (instance) => {
     try {
         if (!fs.existsSync(cwd)) throw new Error('El directorio de instalación no existe');
 
+        // 0. Pre-fix permissions (allow manager to modify storage/bootstrap files during git reset)
+        // using UID 1000 since manager runs as 1000:1000
+        try {
+            await runCmd('docker', ['compose', 'exec', '-T', '-u', 'root', 'app', 'chown', '-R', '1000:1000', 'storage', 'bootstrap/cache']);
+        } catch (e) {
+            // fallback without -u root just in case
+            await runCmd('docker', ['compose', 'exec', '-T', 'app', 'chown', '-R', '1000:1000', 'storage', 'bootstrap/cache']).catch(() => {});
+        }
+
         // 1. Get old commit
         try {
             oldCommit = await runCmd('git', ['rev-parse', '--short', 'HEAD']);
@@ -708,6 +717,15 @@ const updateInstance = async (instance) => {
         await runCmd('docker', ['compose', 'exec', '-T', 'app', 'php', 'artisan', 'up']);
         isDown = false;
 
+        // 11. Post-fix permissions back to www-data
+        try {
+            await runCmd('docker', ['compose', 'exec', '-T', '-u', 'root', 'app', 'chown', '-R', 'www-data:www-data', 'storage', 'bootstrap/cache']);
+            await runCmd('docker', ['compose', 'exec', '-T', '-u', 'root', 'app', 'chmod', '-R', '775', 'storage', 'bootstrap/cache']);
+        } catch (e) {
+            await runCmd('docker', ['compose', 'exec', '-T', 'app', 'chown', '-R', 'www-data:www-data', 'storage', 'bootstrap/cache']).catch(() => {});
+            await runCmd('docker', ['compose', 'exec', '-T', 'app', 'chmod', '-R', '775', 'storage', 'bootstrap/cache']).catch(() => {});
+        }
+
         success = true;
     } catch (err) {
         errorMsg = err.message;
@@ -748,7 +766,7 @@ const updateInstance = async (instance) => {
 app.post('/instances/:rfc/update-code', requireAuth, validateRfc, async (req, res) => {
     getInstanceByRfc(req.params.rfc, res, async (instance) => {
         const result = await updateInstance(instance);
-        res.json({ success: result.success, details: result });
+        res.json({ success: result.success, error: result.error || 'Fallo en la actualización', details: result });
     });
 });
 
