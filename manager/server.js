@@ -599,12 +599,12 @@ app.post('/instances/:rfc/change-api-password', requireAuth, validateRfc, (req, 
         try {
             let envContent = fs.readFileSync(envPath, 'utf8');
             // Safe replace without bash sed
-            // API_PASSWORD could be plain or wrapped in quotes
-            const regex = /^API_PASSWORD=.*$/m;
+            // Target exact PUI_INBOUND_PASSWORD instead of API_PASSWORD
+            const regex = /^PUI_INBOUND_PASSWORD=.*$/m;
             if (regex.test(envContent)) {
-                envContent = envContent.replace(regex, `API_PASSWORD="${password.replace(/"/g, '\\"')}"`);
+                envContent = envContent.replace(regex, `PUI_INBOUND_PASSWORD='${password}'`);
             } else {
-                envContent += `\nAPI_PASSWORD="${password.replace(/"/g, '\\"')}"`;
+                envContent += `\nPUI_INBOUND_PASSWORD='${password}'`;
             }
             fs.writeFileSync(envPath, envContent);
             
@@ -633,6 +633,121 @@ app.post('/instances/:rfc/change-api-password', requireAuth, validateRfc, (req, 
     });
 });
 
+// --- IMPORTAR INSTANCIAS ---
+const importInstances = (basePath, callback) => {
+    let imported = 0;
+    let skipped = 0;
+    let errors = [];
+
+    if (!fs.existsSync(basePath)) {
+        if (callback) callback({ success: false, error: 'La ruta base no existe' });
+        return;
+    }
+
+    const folders = fs.readdirSync(basePath);
+    const rfcRegex = /^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$/;
+
+    let processed = 0;
+    if (folders.length === 0) {
+        if (callback) callback({ success: true, imported, skipped, errors });
+        return;
+    }
+
+    const finishOne = () => {
+        processed++;
+        if (processed === folders.length) {
+            if (callback) callback({ success: true, imported, skipped, errors });
+        }
+    };
+
+    folders.forEach(folder => {
+        const installPath = path.join(basePath, folder);
+        if (!fs.statSync(installPath).isDirectory()) return finishOne();
+        if (!rfcRegex.test(folder)) return finishOne();
+
+        const envPath = path.join(installPath, '.env');
+        const composePath = path.join(installPath, 'docker-compose.yml');
+
+        if (!fs.existsSync(envPath) || !fs.existsSync(composePath)) {
+            skipped++;
+            return finishOne();
+        }
+
+        try {
+            const envContent = fs.readFileSync(envPath, 'utf8');
+            const composeContent = fs.readFileSync(composePath, 'utf8');
+
+            // Parse company name from PUI_INSTITUTION_NAME
+            let company = folder;
+            const companyMatch = envContent.match(/^PUI_INSTITUTION_NAME=["']?(.*?)["']?$/m);
+            if (companyMatch && companyMatch[1]) {
+                company = companyMatch[1];
+            }
+
+            // Parse port from docker-compose.yml (e.g. - "8081:80")
+            let port = 0;
+            const portMatch = composeContent.match(/- ["']?([0-9]+):80["']?/);
+            if (portMatch && portMatch[1]) {
+                port = parseInt(portMatch[1], 10);
+            }
+
+            if (port === 0) {
+                errors.push(`Instancia ${folder} omitida: Puerto no detectado`);
+                return finishOne();
+            }
+
+            // Insert OR IGNORE into DB
+            db.run(
+                'INSERT OR IGNORE INTO instances (rfc, company, port, install_path, status) VALUES (?, ?, ?, ?, ?)',
+                [folder, company, port, installPath, 'online'],
+                function(err) {
+                    if (err) {
+                        errors.push(`Instancia ${folder} error DB: ${err.message}`);
+                    } else if (this.changes > 0) {
+                        imported++;
+                        logAudit(folder, 'import', `Instancia reimportada al manager. Puerto: ${port}`);
+                    } else {
+                        skipped++;
+                    }
+                    finishOne();
+                }
+            );
+        } catch (e) {
+            errors.push(`Instancia ${folder} error FS: ${e.message}`);
+            finishOne();
+        }
+    });
+};
+
+app.post('/instances/import', requireAuth, (req, res) => {
+    db.get("SELECT value FROM settings WHERE key = 'BASE_PATH'", (err, row) => {
+        const basePath = row ? row.value : '/home/aplicaciones/pui/clientes';
+        importInstances(basePath, (result) => {
+            if (result.success) {
+                logAudit('GLOBAL', 'import_instances', `Importación manual completada. Importadas: ${result.imported}, Omitidas: ${result.skipped}`);
+                res.json(result);
+            } else {
+                res.status(500).json(result);
+            }
+        });
+    });
+});
+
+const autoImportIfEmpty = () => {
+    db.get('SELECT COUNT(*) as count FROM instances', (err, row) => {
+        if (!err && row && row.count === 0) {
+            console.log('Base de datos vacía. Escaneando instancias existentes...');
+            db.get("SELECT value FROM settings WHERE key = 'BASE_PATH'", (err, setRow) => {
+                const basePath = setRow ? setRow.value : '/home/aplicaciones/pui/clientes';
+                importInstances(basePath, (result) => {
+                    console.log(`Auto-importación finalizada. Importadas: ${result.imported}, Errores: ${result.errors.length}`);
+                });
+            });
+        }
+    });
+};
+
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`PUI Manager corriendo en el puerto ${PORT}`);
+    autoImportIfEmpty();
 });

@@ -1,7 +1,10 @@
 <%- include('partials/header') %>
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h3 class="fw-bold mb-0">Instancias PUI</h3>
-    <a href="/instances/create" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i> Nueva Instancia</a>
+    <div>
+        <button class="btn btn-outline-info me-2" id="btnImportInstances"><i class="bi bi-cloud-arrow-down me-1"></i> Importar existentes</button>
+        <a href="/instances/create" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i> Nueva Instancia</a>
+    </div>
 </div>
 
 <div class="card shadow-sm border-0">
@@ -237,6 +240,34 @@
                     alert('Contraseña actualizada exitosamente. Los servicios han sido reiniciados.');
                 } else {
                     showResult('Error al cambiar contraseña', `Mensaje: ${data.error}\\nDetalles: ${data.details || ''}`, true);
+                }
+            } catch (err) {
+                hideLoader();
+                showResult('Error de Conexión', err.message, true);
+            }
+        });
+
+        document.getElementById('btnImportInstances').addEventListener('click', async () => {
+            if (!confirm('¿Deseas buscar e importar instancias existentes en la carpeta de clientes?')) return;
+            
+            showLoader('Escaneando e importando instancias...');
+            try {
+                const response = await fetch('/instances/import', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                hideLoader();
+                
+                if (data.success) {
+                    const errorMsgs = data.errors.length > 0 ? `\\nErrores:\\n${data.errors.join('\\n')}` : '';
+                    alert(`Importación completada.\\nNuevas importadas: ${data.imported}\\nOmitidas/Ya existentes: ${data.skipped}${errorMsgs}`);
+                    if (data.imported > 0) location.reload();
+                } else {
+                    showResult('Error en Importación', `Mensaje: ${data.error}`, true);
                 }
             } catch (err) {
                 hideLoader();
