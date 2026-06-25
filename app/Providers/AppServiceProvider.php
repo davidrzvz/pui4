@@ -28,7 +28,7 @@ class AppServiceProvider extends ServiceProvider
             'panels::auth.login.form.before',
             fn (): string => \Illuminate\Support\Facades\Blade::render('
                 @php
-                    $rfc = env("PUI_RFC");
+                    $rfc = env("PUI_INSTITUTION_RFC", env("PUI_RFC"));
                     $company = env("PUI_INSTITUTION_NAME");
                 @endphp
                 @if($rfc && $company)
