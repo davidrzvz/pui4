@@ -24,6 +24,24 @@ class AppServiceProvider extends ServiceProvider
             $event->user->save();
         });
 
+        \Filament\Support\Facades\FilamentView::registerRenderHook(
+            'panels::auth.login.form.before',
+            fn (): string => \Illuminate\Support\Facades\Blade::render('
+                @php
+                    $rfc = env("PUI_RFC");
+                    $company = env("PUI_INSTITUTION_NAME");
+                @endphp
+                @if($rfc && $company)
+                    <div class="mb-6 text-center">
+                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">RFC:</p>
+                        <p class="text-lg font-bold text-gray-950 dark:text-white mb-2">{{ $rfc }}</p>
+                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Empresa:</p>
+                        <p class="text-md text-gray-950 dark:text-white">{{ $company }}</p>
+                    </div>
+                @endif
+            ')
+        );
+
         $appUrl = config('app.url');
         if ($appUrl) {
             $path = parse_url($appUrl, PHP_URL_PATH);
