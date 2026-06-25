@@ -1,0 +1,46 @@
+<%- include('partials/header') %>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold mb-0">Auditoría del Sistema</h3>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Fecha</th>
+                        <th>Acción</th>
+                        <th>RFC</th>
+                        <th class="pe-4">Mensaje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (audits.length === 0) { %>
+                        <tr>
+                            <td colspan="4" class="text-center py-5 text-muted">No hay registros de auditoría.</td>
+                        </tr>
+                    <% } else { %>
+                        <% audits.forEach(log => { %>
+                            <tr>
+                                <td class="align-middle ps-4 text-muted" style="font-size: 0.85rem;"><%= new Date(log.created_at).toLocaleString() %></td>
+                                <td class="align-middle"><span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-25"><%= log.action %></span></td>
+                                <td class="align-middle fw-semibold"><%= log.rfc || 'GLOBAL' %></td>
+                                <td class="align-middle pe-4">
+                                    <% if (log.message.startsWith('Error')) { %>
+                                        <span class="text-danger"><i class="bi bi-x-circle me-1"></i><%= log.message %></span>
+                                    <% } else if (log.message.startsWith('Éxito')) { %>
+                                        <span class="text-success"><i class="bi bi-check-circle me-1"></i><%= log.message %></span>
+                                    <% } else { %>
+                                        <span class="text-muted"><%= log.message %></span>
+                                    <% } %>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<%- include('partials/footer') %>

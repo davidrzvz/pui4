@@ -1,0 +1,36 @@
+<%- include('partials/header') %>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold mb-0">Configuración Global</h3>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+        <form action="/settings" method="POST">
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <label for="SERVER_IP" class="form-label text-muted fw-semibold">IP del Servidor</label>
+                    <input type="text" class="form-control bg-transparent text-light border-secondary" id="SERVER_IP" name="SERVER_IP" value="<%= settings.SERVER_IP %>" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="DEFAULT_API_USER" class="form-label text-muted fw-semibold">Usuario API por Defecto</label>
+                    <input type="text" class="form-control bg-transparent text-light border-secondary" id="DEFAULT_API_USER" name="DEFAULT_API_USER" value="<%= settings.DEFAULT_API_USER %>" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="BASE_PATH" class="form-label text-muted fw-semibold">Ruta Base de Clientes</label>
+                    <input type="text" class="form-control bg-transparent text-light border-secondary" id="BASE_PATH" name="BASE_PATH" value="<%= settings.BASE_PATH %>" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="BACKUP_PATH" class="form-label text-muted fw-semibold">Ruta de Respaldos</label>
+                    <input type="text" class="form-control bg-transparent text-light border-secondary" id="BACKUP_PATH" name="BACKUP_PATH" value="<%= settings.BACKUP_PATH %>" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="RETENTION_DAYS" class="form-label text-muted fw-semibold">Días de Retención de Respaldos</label>
+                    <input type="number" class="form-control bg-transparent text-light border-secondary" id="RETENTION_DAYS" name="RETENTION_DAYS" value="<%= settings.RETENTION_DAYS %>" required>
+                </div>
+            </div>
+            <hr class="my-4 border-secondary opacity-25">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i> Guardar Configuración</button>
+        </form>
+    </div>
+</div>
+<%- include('partials/footer') %>

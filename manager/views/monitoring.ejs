@@ -1,0 +1,100 @@
+<%- include('partials/header') %>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold mb-0">Monitoreo Global (En Tiempo Real)</h3>
+    <button id="btnRefresh" class="btn btn-primary"><i class="bi bi-arrow-clockwise me-1"></i> Actualizar</button>
+</div>
+
+<div class="row g-4" id="monitoringContainer">
+    <% instances.forEach(instance => { %>
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-sm" style="background: linear-gradient(145deg, rgba(30,41,59,1) 0%, rgba(15,23,42,1) 100%);">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0"><%= instance.rfc %></h5>
+                        <div class="status-indicator d-flex align-items-center" id="status-<%= instance.rfc %>">
+                            <span class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></span>
+                            <span class="ms-2 text-muted" style="font-size: 0.85rem;">Cargando...</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <small class="text-muted text-uppercase fw-bold" style="letter-spacing: 0.05em; font-size: 0.7rem;">Contenedores Activos</small>
+                        <h4 class="mb-0" id="containers-<%= instance.rfc %>">--</h4>
+                    </div>
+
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <small class="text-muted text-uppercase fw-bold" style="letter-spacing: 0.05em; font-size: 0.7rem;">CPU Total</small>
+                            <h5 class="mb-0 text-info" id="cpu-<%= instance.rfc %>">--%</h5>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted text-uppercase fw-bold" style="letter-spacing: 0.05em; font-size: 0.7rem;">Uso RAM</small>
+                            <div id="ram-<%= instance.rfc %>" style="font-size: 0.85rem;" class="text-light mt-1">--</div>
+                        </div>
+                    </div>
+                    
+                    <hr class="border-secondary opacity-25">
+                    <div class="d-flex justify-content-between">
+                        <small class="text-muted">Puerto: <%= instance.port %></small>
+                        <small class="text-muted" id="http-<%= instance.rfc %>">--</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <% }) %>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const instances = <%- JSON.stringify(instances.map(i => i.rfc)) %>;
+        
+        const fetchMonitoringData = async (rfc) => {
+            const statusIndicator = document.getElementById(`status-${rfc}`);
+            const containersEl = document.getElementById(`containers-${rfc}`);
+            const cpuEl = document.getElementById(`cpu-${rfc}`);
+            const ramEl = document.getElementById(`ram-${rfc}`);
+            
+            try {
+                const response = await fetch(`/monitoring/api/${rfc}`);
+                const resData = await response.json();
+                
+                if (resData.success) {
+                    const data = resData.data;
+                    statusIndicator.innerHTML = '<i class="bi bi-circle-fill text-success" style="font-size: 0.5rem;"></i><span class="ms-2 text-success" style="font-size: 0.85rem;">Conectado</span>';
+                    containersEl.innerText = data.activeContainers;
+                    cpuEl.innerText = data.totalCpu.toFixed(2) + '%';
+                    
+                    if (data.memoryRaw.length > 0) {
+                        ramEl.innerHTML = data.memoryRaw.map(m => `<div>${m}</div>`).join('');
+                    } else {
+                        ramEl.innerText = '0 MiB';
+                    }
+                } else {
+                    statusIndicator.innerHTML = '<i class="bi bi-x-circle-fill text-danger" style="font-size: 0.8rem;"></i><span class="ms-1 text-danger" style="font-size: 0.85rem;">Error</span>';
+                    containersEl.innerText = '--';
+                    cpuEl.innerText = '--';
+                    ramEl.innerText = '--';
+                }
+            } catch (err) {
+                statusIndicator.innerHTML = '<i class="bi bi-dash-circle-fill text-warning" style="font-size: 0.8rem;"></i><span class="ms-1 text-warning" style="font-size: 0.85rem;">No disp.</span>';
+                containersEl.innerText = '--';
+                cpuEl.innerText = '--';
+                ramEl.innerText = '--';
+            }
+        };
+
+        const loadAll = () => {
+            instances.forEach(rfc => {
+                document.getElementById(`status-${rfc}`).innerHTML = '<span class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></span><span class="ms-2 text-muted" style="font-size: 0.85rem;">Cargando...</span>';
+                fetchMonitoringData(rfc);
+            });
+        };
+
+        document.getElementById('btnRefresh').addEventListener('click', loadAll);
+        
+        // Initial load
+        loadAll();
+    });
+</script>
+
+<%- include('partials/footer') %>

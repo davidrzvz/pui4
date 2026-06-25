@@ -22,6 +22,33 @@ const db = new sqlite3.Database(dbPath, (err) => {
             last_backup DATETIME,
             status TEXT DEFAULT 'online'
         )`);
+
+        db.run(`CREATE TABLE IF NOT EXISTS manager_audit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            action TEXT NOT NULL,
+            rfc TEXT,
+            message TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`);
+
+        db.run(`CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )`, () => {
+            // Populate defaults if empty
+            const defaults = {
+                'SERVER_IP': '192.168.1.10',
+                'BASE_PATH': '/home/aplicaciones/pui/clientes',
+                'DEFAULT_API_USER': 'PUI',
+                'BACKUP_PATH': '/home/aplicaciones/pui/backups',
+                'RETENTION_DAYS': '30'
+            };
+            const stmt = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
+            for (const [key, value] of Object.entries(defaults)) {
+                stmt.run([key, value]);
+            }
+            stmt.finalize();
+        });
     }
 });
 

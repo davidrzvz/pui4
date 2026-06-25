@@ -70,7 +70,8 @@
                                             
                                             <li><hr class="dropdown-divider border-secondary opacity-25"></li>
                                             <li class="dropdown-header">Configuración</li>
-                                            <li><button class="dropdown-item btn-action" data-action="config" data-rfc="<%= instance.rfc %>" data-method="GET"><i class="bi bi-key-fill text-muted"></i> Ver credenciales API</button></li>
+                                            <li><button class="dropdown-item btn-action" data-action="change-password-modal" data-rfc="<%= instance.rfc %>"><i class="bi bi-key-fill text-muted"></i> Ver / Cambiar Credenciales API</button></li>
+                                            <li><button class="dropdown-item btn-action" data-action="config" data-rfc="<%= instance.rfc %>" data-method="GET"><i class="bi bi-gear-fill text-muted"></i> Ver Variables de Entorno</button></li>
                                         </ul>
                                     </div>
                                 </td>
@@ -79,6 +80,38 @@
                     <% } %>
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="passwordModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-light border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">Credenciales API</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="passwordForm">
+                    <input type="hidden" id="pwdRfc">
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Instancia RFC</label>
+                        <input type="text" class="form-control bg-transparent text-light border-secondary" id="pwdRfcDisplay" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Usuario API</label>
+                        <input type="text" class="form-control bg-transparent text-light border-secondary" value="PUI" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Nueva Contraseña</label>
+                        <input type="password" class="form-control bg-transparent text-light border-secondary" id="pwdNew" required minlength="6" placeholder="Mínimo 6 caracteres">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnSavePassword"><i class="bi bi-save me-1"></i> Guardar y Reiniciar</button>
+            </div>
         </div>
     </div>
 </div>
@@ -106,10 +139,24 @@
             logsModal.show();
         };
 
+        const pwdModal = new bootstrap.Modal(document.getElementById('passwordModal'));
+        const pwdRfc = document.getElementById('pwdRfc');
+        const pwdRfcDisplay = document.getElementById('pwdRfcDisplay');
+        const pwdNew = document.getElementById('pwdNew');
+
         document.querySelectorAll('.btn-action').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const action = btn.dataset.action;
                 const rfc = btn.dataset.rfc;
+                
+                if (action === 'change-password-modal') {
+                    pwdRfc.value = rfc;
+                    pwdRfcDisplay.value = rfc;
+                    pwdNew.value = '';
+                    pwdModal.show();
+                    return;
+                }
+
                 const method = btn.dataset.method;
                 const needsConfirm = btn.dataset.confirm === 'true';
 
@@ -147,7 +194,7 @@
                         } else if (action === 'status') {
                             showResult('Estado de Servicios Docker', data.status);
                         } else if (action === 'config') {
-                            showResult('Credenciales y Configuración (Protegidas)', data.config);
+                            showResult('Variables de Entorno (Protegidas)', data.config);
                         } else if (action === 'audits') {
                             showResult('Auditorías', data.audits);
                         }
@@ -159,6 +206,42 @@
                     showResult('Error de Conexión', err.message, true);
                 }
             });
+        });
+
+        document.getElementById('btnSavePassword').addEventListener('click', async () => {
+            const rfc = pwdRfc.value;
+            const newPassword = pwdNew.value;
+            
+            if (newPassword.length < 6) {
+                alert('La contraseña debe tener al menos 6 caracteres');
+                return;
+            }
+            
+            pwdModal.hide();
+            showLoader(`Cambiando contraseña API en ${rfc} y reiniciando servicios...`);
+            
+            try {
+                const response = await fetch(`/instances/${rfc}/change-api-password`, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ newPassword })
+                });
+                
+                const data = await response.json();
+                hideLoader();
+                
+                if (data.success) {
+                    alert('Contraseña actualizada exitosamente. Los servicios han sido reiniciados.');
+                } else {
+                    showResult('Error al cambiar contraseña', `Mensaje: ${data.error}\\nDetalles: ${data.details || ''}`, true);
+                }
+            } catch (err) {
+                hideLoader();
+                showResult('Error de Conexión', err.message, true);
+            }
         });
     });
 </script>

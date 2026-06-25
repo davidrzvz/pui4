@@ -1,22 +1,56 @@
 <% if (locals.user) { %>
-<nav class="sidebar d-flex flex-column">
-    <div class="sidebar-brand d-flex align-items-center text-primary">
-        <i class="bi bi-box-fill me-2 fs-4"></i> PUI Manager
+<div class="sidebar d-flex flex-column flex-shrink-0 p-3 bg-dark text-white border-end border-secondary" style="width: 250px; min-height: 100vh;">
+    <a href="/" class="d-flex align-items-center mb-4 me-md-auto text-white text-decoration-none">
+        <span class="fs-4 fw-bold">PUI <span class="text-primary">Manager</span></span>
+    </a>
+    <hr class="border-secondary mt-0">
+    <ul class="nav nav-pills flex-column mb-auto">
+        <li class="nav-item mb-2">
+            <h6 class="sidebar-heading px-3 text-muted text-uppercase fw-bold" style="font-size: 0.75rem; letter-spacing: 0.05em;">Principal</h6>
+        </li>
+        <li class="nav-item">
+            <a href="/" class="nav-link text-white <%= title === 'Dashboard' ? 'active' : '' %>">
+                <i class="bi bi-speedometer2 me-2"></i> Dashboard
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="/instances" class="nav-link text-white <%= title === 'Instancias' ? 'active' : '' %>">
+                <i class="bi bi-server me-2"></i> Instancias
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="/instances/create" class="nav-link text-white <%= title === 'Crear Instancia' ? 'active' : '' %>">
+                <i class="bi bi-plus-square me-2"></i> Crear Instancia
+            </a>
+        </li>
+        <li class="nav-item mt-4 mb-2">
+            <h6 class="sidebar-heading px-3 text-muted text-uppercase fw-bold" style="font-size: 0.75rem; letter-spacing: 0.05em;">Gestión Global</h6>
+        </li>
+        <li class="nav-item">
+            <a href="/monitoring" class="nav-link text-white <%= title === 'Monitoreo Global' ? 'active' : '' %>">
+                <i class="bi bi-activity me-2"></i> Monitoreo
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="/backups" class="nav-link text-white <%= title === 'Respaldos Globales' ? 'active' : '' %>">
+                <i class="bi bi-archive me-2"></i> Respaldos
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="/audit" class="nav-link text-white <%= title === 'Auditoría del Sistema' ? 'active' : '' %>">
+                <i class="bi bi-shield-check me-2"></i> Auditoría
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="/settings" class="nav-link text-white <%= title === 'Configuración Global' ? 'active' : '' %>">
+                <i class="bi bi-gear me-2"></i> Configuración
+            </a>
+        </li>
+    </ul>
+    <div class="mt-auto pt-3 border-top border-secondary">
+        <a href="/logout" class="nav-link text-danger">
+            <i class="bi bi-box-arrow-left me-2"></i> Cerrar Sesión
+        </a>
     </div>
-    
-    <div class="sidebar-section mt-2">Principal</div>
-    <a href="/" class="<%= locals.title === 'Dashboard' ? 'active' : '' %>"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
-    <a href="/instances" class="<%= locals.title === 'Instancias' ? 'active' : '' %>"><i class="bi bi-server"></i> Instancias</a>
-    <a href="/instances/create" class="<%= locals.title === 'Crear Instancia' ? 'active' : '' %>"><i class="bi bi-plus-square-fill text-success"></i> Crear Instancia</a>
-    
-    <div class="sidebar-section mt-4">Gestión Global</div>
-    <a href="#" class=""><i class="bi bi-activity"></i> Monitoreo</a>
-    <a href="#" class=""><i class="bi bi-shield-check"></i> Auditoría</a>
-    <a href="#" class=""><i class="bi bi-archive-fill"></i> Respaldos</a>
-    <a href="#" class=""><i class="bi bi-gear-fill"></i> Configuración</a>
-    
-    <div class="mt-auto pb-4">
-        <a href="/logout" class="text-danger mt-4"><i class="bi bi-box-arrow-left fs-5"></i> Cerrar Sesión</a>
-    </div>
-</nav>
+</div>
 <% } %>

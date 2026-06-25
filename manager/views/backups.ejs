@@ -1,0 +1,90 @@
+<%- include('partials/header') %>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold mb-0">Respaldos Globales</h3>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive" style="overflow: visible !important;">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-4">RFC</th>
+                        <th>Archivo</th>
+                        <th>Tipo</th>
+                        <th>Tamaño</th>
+                        <th>Fecha Creación</th>
+                        <th class="text-end pe-4">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (backups.length === 0) { %>
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">No hay respaldos registrados en la ruta configurada.</td>
+                        </tr>
+                    <% } else { %>
+                        <% backups.forEach(b => { %>
+                            <tr>
+                                <td class="align-middle ps-4 fw-bold"><%= b.rfc %></td>
+                                <td class="align-middle text-muted" style="font-size: 0.85rem;"><%= b.filename %></td>
+                                <td class="align-middle"><span class="badge bg-info bg-opacity-25 text-info border border-info border-opacity-25"><%= b.type %></span></td>
+                                <td class="align-middle"><%= b.size %></td>
+                                <td class="align-middle text-muted" style="font-size: 0.85rem;"><%= new Date(b.date).toLocaleString() %></td>
+                                <td class="align-middle text-end pe-4">
+                                    <div class="btn-group">
+                                        <a href="/backups/download/<%= b.rfc %>/<%= b.filename %>" class="btn btn-sm btn-outline-primary" target="_blank" title="Descargar"><i class="bi bi-download"></i></a>
+                                        <button class="btn btn-sm btn-outline-danger btn-delete-backup" data-rfc="<%= b.rfc %>" data-file="<%= b.filename %>" title="Eliminar"><i class="bi bi-trash3"></i></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const loader = document.getElementById('globalLoader');
+        const loaderText = document.getElementById('globalLoaderText');
+
+        const showLoader = (msg) => {
+            loaderText.innerText = msg || 'Procesando...';
+            loader.style.display = 'flex';
+        };
+        const hideLoader = () => {
+            loader.style.display = 'none';
+        };
+
+        document.querySelectorAll('.btn-delete-backup').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const rfc = btn.dataset.rfc;
+                const file = btn.dataset.file;
+                
+                if (!confirm(`¿Estás seguro de que deseas eliminar el respaldo ${file}? Esta acción es irreversible.`)) return;
+
+                showLoader('Eliminando respaldo...');
+                try {
+                    const response = await fetch(`/backups/${rfc}/${file}`, {
+                        method: 'DELETE',
+                        headers: { 'Accept': 'application/json' }
+                    });
+                    const data = await response.json();
+                    hideLoader();
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert(`Error al eliminar: ${data.error}`);
+                    }
+                } catch (err) {
+                    hideLoader();
+                    alert(`Error de conexión: ${err.message}`);
+                }
+            });
+        });
+    });
+</script>
+
+<%- include('partials/footer') %>

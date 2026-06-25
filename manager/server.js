@@ -154,6 +154,7 @@ app.post('/instances/create', requireAuth, (req, res) => {
                     console.error(err);
                     req.session.error = 'Instancia creada, pero error al registrar en base de datos.';
                 } else {
+                    logAudit(rfc.toUpperCase(), 'create', `Éxito: Instancia creada en puerto ${port}`);
                     req.session.success = `Instancia para ${company} (${rfc}) creada y registrada exitosamente en el puerto ${port}.`;
                 }
                 res.redirect('/instances');
@@ -186,14 +187,22 @@ const getInstanceByRfc = (rfc, res, callback) => {
     });
 };
 
-const execCommand = (file, args, options, res, successMsg, dbUpdate = null) => {
+const logAudit = (rfc, action, message) => {
+    const stmt = db.prepare('INSERT INTO manager_audit_logs (action, rfc, message) VALUES (?, ?, ?)');
+    stmt.run([action, rfc, message]);
+    stmt.finalize();
+};
+
+const execCommand = (file, args, options, res, successMsg, dbUpdate = null, auditAction = null, rfc = null) => {
     execFile(file, args, options, (error, stdout, stderr) => {
         if (error) {
+            if (auditAction && rfc) logAudit(rfc, auditAction, `Error: ${error.message}`);
             return res.status(500).json({ success: false, error: error.message, stdout, stderr });
         }
         if (dbUpdate) {
             db.run(dbUpdate.query, dbUpdate.params);
         }
+        if (auditAction && rfc) logAudit(rfc, auditAction, `Éxito: ${successMsg}`);
         res.json({ success: true, message: successMsg, stdout, stderr });
     });
 };
@@ -204,7 +213,8 @@ app.post('/instances/:rfc/restart', requireAuth, validateRfc, (req, res) => {
     getInstanceByRfc(req.params.rfc, res, (instance) => {
         execCommand('docker', ['compose', 'restart'], { cwd: instance.install_path }, res, 
             'Instancia reiniciada correctamente.', 
-            { query: 'UPDATE instances SET status = ? WHERE id = ?', params: ['online', instance.id] }
+            { query: 'UPDATE instances SET status = ? WHERE id = ?', params: ['online', instance.id] },
+            'restart', instance.rfc
         );
     });
 });
@@ -213,7 +223,8 @@ app.post('/instances/:rfc/stop', requireAuth, validateRfc, (req, res) => {
     getInstanceByRfc(req.params.rfc, res, (instance) => {
         execCommand('docker', ['compose', 'stop'], { cwd: instance.install_path }, res, 
             'Instancia detenida.', 
-            { query: 'UPDATE instances SET status = ? WHERE id = ?', params: ['offline', instance.id] }
+            { query: 'UPDATE instances SET status = ? WHERE id = ?', params: ['offline', instance.id] },
+            'stop', instance.rfc
         );
     });
 });
@@ -222,7 +233,8 @@ app.post('/instances/:rfc/start', requireAuth, validateRfc, (req, res) => {
     getInstanceByRfc(req.params.rfc, res, (instance) => {
         execCommand('docker', ['compose', 'up', '-d'], { cwd: instance.install_path }, res, 
             'Instancia iniciada.', 
-            { query: 'UPDATE instances SET status = ? WHERE id = ?', params: ['online', instance.id] }
+            { query: 'UPDATE instances SET status = ? WHERE id = ?', params: ['online', instance.id] },
+            'start', instance.rfc
         );
     });
 });
@@ -232,6 +244,7 @@ app.post('/instances/:rfc/delete', requireAuth, validateRfc, (req, res) => {
         // 1. docker compose down -v
         execFile('docker', ['compose', 'down', '-v'], { cwd: instance.install_path }, (error, stdout, stderr) => {
             if (error) {
+                logAudit(instance.rfc, 'delete', `Error: ${error.message}`);
                 return res.status(500).json({ success: false, error: 'Error al detener contenedores', details: error.message, stdout, stderr });
             }
             
@@ -239,14 +252,17 @@ app.post('/instances/:rfc/delete', requireAuth, validateRfc, (req, res) => {
             try {
                 fs.rmSync(instance.install_path, { recursive: true, force: true });
             } catch (fsErr) {
+                logAudit(instance.rfc, 'delete', `Error FS: ${fsErr.message}`);
                 return res.status(500).json({ success: false, error: 'Error al eliminar archivos', details: fsErr.message });
             }
 
             // 3. Delete from DB
             db.run('DELETE FROM instances WHERE id = ?', [instance.id], (dbErr) => {
                 if (dbErr) {
+                    logAudit(instance.rfc, 'delete', `Error DB`);
                     return res.status(500).json({ success: false, error: 'Error al eliminar de la base de datos' });
                 }
+                logAudit(instance.rfc, 'delete', `Éxito: Instancia eliminada`);
                 res.json({ success: true, message: 'Instancia eliminada por completo.' });
             });
         });
@@ -275,9 +291,11 @@ app.post('/instances/:rfc/backup-db', requireAuth, validateRfc, (req, res) => {
         
         exec(cmd, { cwd: instance.install_path }, (error, stdout, stderr) => {
             if (error) {
+                logAudit(instance.rfc, 'backup', `Error: ${error.message}`);
                 return res.status(500).json({ success: false, error: error.message, stdout, stderr });
             }
             db.run('UPDATE instances SET last_backup = CURRENT_TIMESTAMP WHERE id = ?', [instance.id]);
+            logAudit(instance.rfc, 'backup', `Éxito: DB (${filename})`);
             res.json({ success: true, message: 'Respaldo DB completado', filename });
         });
     });
@@ -293,9 +311,11 @@ app.post('/instances/:rfc/backup-files', requireAuth, validateRfc, (req, res) =>
         // tar --exclude=vendor --exclude=node_modules --exclude=.git -czf filepath -C installPath .
         execFile('tar', ['--exclude=vendor', '--exclude=node_modules', '--exclude=.git', '-czf', filepath, '-C', instance.install_path, '.'], (error, stdout, stderr) => {
             if (error) {
+                logAudit(instance.rfc, 'backup', `Error files: ${error.message}`);
                 return res.status(500).json({ success: false, error: error.message, stdout, stderr });
             }
             db.run('UPDATE instances SET last_backup = CURRENT_TIMESTAMP WHERE id = ?', [instance.id]);
+            logAudit(instance.rfc, 'backup', `Éxito: Archivos (${filename})`);
             res.json({ success: true, message: 'Respaldo de archivos completado', filename });
         });
     });
@@ -312,12 +332,19 @@ app.post('/instances/:rfc/backup-full', requireAuth, validateRfc, (req, res) => 
         const dbCmd = `docker exec ${containerName} sh -c 'mysqldump -u root -p"$MYSQL_ROOT_PASSWORD" --all-databases' | gzip > ${dbFile}`;
         
         exec(dbCmd, { cwd: instance.install_path }, (dbErr, dbStdout, dbStderr) => {
-            if (dbErr) return res.status(500).json({ success: false, error: 'Error DB Backup', details: dbErr.message, stdout: dbStdout, stderr: dbStderr });
+            if (dbErr) {
+                logAudit(instance.rfc, 'backup', `Error full DB: ${dbErr.message}`);
+                return res.status(500).json({ success: false, error: 'Error DB Backup', details: dbErr.message, stdout: dbStdout, stderr: dbStderr });
+            }
             
             execFile('tar', ['--exclude=vendor', '--exclude=node_modules', '--exclude=.git', '-czf', filesFile, '-C', instance.install_path, '.'], (fileErr, fileStdout, fileStderr) => {
-                if (fileErr) return res.status(500).json({ success: false, error: 'Error Files Backup', details: fileErr.message, stdout: fileStdout, stderr: fileStderr });
+                if (fileErr) {
+                    logAudit(instance.rfc, 'backup', `Error full Files: ${fileErr.message}`);
+                    return res.status(500).json({ success: false, error: 'Error Files Backup', details: fileErr.message, stdout: fileStdout, stderr: fileStderr });
+                }
                 
                 db.run('UPDATE instances SET last_backup = CURRENT_TIMESTAMP WHERE id = ?', [instance.id]);
+                logAudit(instance.rfc, 'backup', `Éxito: Respaldo Completo`);
                 res.json({ success: true, message: 'Respaldo completo completado', files: [dbFile, filesFile] });
             });
         });
@@ -398,6 +425,205 @@ app.get('/instances/:rfc/config', requireAuth, validateRfc, (req, res) => {
 app.get('/instances/:rfc/audits', requireAuth, validateRfc, (req, res) => {
     // Placeholder, as requested
     res.json({ success: true, audits: [{ date: new Date().toISOString(), event: 'Placeholder para auditorías', user: 'admin' }] });
+});
+
+// --- SETTINGS ---
+app.get('/settings', requireAuth, (req, res) => {
+    db.all('SELECT * FROM settings', (err, rows) => {
+        if (err) return res.status(500).send('Error de BD');
+        const settings = {};
+        rows.forEach(r => settings[r.key] = r.value);
+        res.render('settings', { settings, title: 'Configuración Global' });
+    });
+});
+
+app.post('/settings', requireAuth, (req, res) => {
+    const data = req.body;
+    const stmt = db.prepare('UPDATE settings SET value = ? WHERE key = ?');
+    for (const [key, value] of Object.entries(data)) {
+        stmt.run([value, key]);
+    }
+    stmt.finalize();
+    logAudit('GLOBAL', 'update_settings', 'Configuración global actualizada');
+    req.session.success = 'Configuración actualizada exitosamente.';
+    res.redirect('/settings');
+});
+
+// --- AUDIT ---
+app.get('/audit', requireAuth, (req, res) => {
+    db.all('SELECT * FROM manager_audit_logs ORDER BY created_at DESC LIMIT 500', (err, rows) => {
+        if (err) return res.status(500).send('Error de BD');
+        res.render('audit', { audits: rows, title: 'Auditoría del Sistema' });
+    });
+});
+
+// --- BACKUPS ---
+app.get('/backups', requireAuth, (req, res) => {
+    // Read from DB setting or default
+    db.get("SELECT value FROM settings WHERE key = 'BACKUP_PATH'", (err, row) => {
+        const basePath = row ? row.value : '/home/aplicaciones/pui/backups';
+        if (!fs.existsSync(basePath)) fs.mkdirSync(basePath, { recursive: true });
+
+        const backupsList = [];
+        const rfcs = fs.readdirSync(basePath);
+        
+        rfcs.forEach(rfcFolder => {
+            const folderPath = path.join(basePath, rfcFolder);
+            if (fs.statSync(folderPath).isDirectory()) {
+                const files = fs.readdirSync(folderPath);
+                files.forEach(file => {
+                    const stats = fs.statSync(path.join(folderPath, file));
+                    let type = 'Desconocido';
+                    if (file.includes('_db_')) type = 'Base de Datos';
+                    else if (file.includes('_files_')) type = 'Archivos';
+                    
+                    backupsList.push({
+                        rfc: rfcFolder,
+                        filename: file,
+                        type,
+                        size: (stats.size / (1024 * 1024)).toFixed(2) + ' MB',
+                        date: stats.mtime
+                    });
+                });
+            }
+        });
+
+        // Sort by date DESC
+        backupsList.sort((a, b) => b.date - a.date);
+        
+        res.render('backups', { backups: backupsList, title: 'Respaldos Globales' });
+    });
+});
+
+const validateBackupFile = (filename) => {
+    // Strict validation: Only allow letters, numbers, underscores, dashes, and standard tar.gz/sql.gz extensions
+    const regex = /^[A-Z0-9_\\-]+\\.(tar\\.gz|sql\\.gz|zip)$/i;
+    return regex.test(filename) && !filename.includes('..');
+};
+
+app.get('/backups/download/:rfc/:file', requireAuth, validateRfc, (req, res) => {
+    const { rfc, file } = req.params;
+    if (!validateBackupFile(file)) {
+        logAudit(rfc, 'download_backup', `Intento de descarga inválido: ${file}`);
+        return res.status(400).send('Archivo inválido');
+    }
+    db.get("SELECT value FROM settings WHERE key = 'BACKUP_PATH'", (err, row) => {
+        const basePath = row ? row.value : '/home/aplicaciones/pui/backups';
+        const filepath = path.join(basePath, rfc.toUpperCase(), file);
+        if (fs.existsSync(filepath)) {
+            logAudit(rfc.toUpperCase(), 'download_backup', `Éxito: Descarga ${file}`);
+            res.download(filepath);
+        } else {
+            res.status(404).send('Archivo no encontrado');
+        }
+    });
+});
+
+app.delete('/backups/:rfc/:file', requireAuth, validateRfc, (req, res) => {
+    const { rfc, file } = req.params;
+    if (!validateBackupFile(file)) {
+        return res.status(400).json({ success: false, error: 'Archivo inválido' });
+    }
+    db.get("SELECT value FROM settings WHERE key = 'BACKUP_PATH'", (err, row) => {
+        const basePath = row ? row.value : '/home/aplicaciones/pui/backups';
+        const filepath = path.join(basePath, rfc.toUpperCase(), file);
+        if (fs.existsSync(filepath)) {
+            try {
+                fs.unlinkSync(filepath);
+                logAudit(rfc.toUpperCase(), 'delete_backup', `Éxito: Eliminado ${file}`);
+                res.json({ success: true });
+            } catch (e) {
+                logAudit(rfc.toUpperCase(), 'delete_backup', `Error FS: ${e.message}`);
+                res.status(500).json({ success: false, error: e.message });
+            }
+        } else {
+            res.status(404).json({ success: false, error: 'Archivo no encontrado' });
+        }
+    });
+});
+
+// --- MONITORING ---
+app.get('/monitoring', requireAuth, (req, res) => {
+    db.all('SELECT * FROM instances ORDER BY rfc ASC', (err, rows) => {
+        if (err) return res.status(500).send('Error de BD');
+        res.render('monitoring', { instances: rows, title: 'Monitoreo Global' });
+    });
+});
+
+app.get('/monitoring/api/:rfc', requireAuth, validateRfc, (req, res) => {
+    getInstanceByRfc(req.params.rfc, res, (instance) => {
+        const containerPrefix = `pui-${instance.rfc.toLowerCase()}-`;
+        
+        execFile('docker', ['stats', '--no-stream', '--format', '{{.Container}}||{{.CPUPerc}}||{{.MemUsage}}||{{.Name}}'], (err, stdout) => {
+            if (err) return res.status(500).json({ success: false, error: 'No disponible' });
+            
+            const lines = stdout.trim().split('\\n');
+            const data = {
+                activeContainers: 0,
+                totalCpu: 0.0,
+                memoryRaw: []
+            };
+
+            lines.forEach(line => {
+                if (line.includes(containerPrefix)) {
+                    data.activeContainers++;
+                    const [id, cpu, mem, name] = line.split('||');
+                    data.totalCpu += parseFloat(cpu.replace('%', '')) || 0;
+                    data.memoryRaw.push(mem);
+                }
+            });
+
+            res.json({ success: true, data });
+        });
+    });
+});
+
+// --- API CREDENTIALS ---
+app.post('/instances/:rfc/change-api-password', requireAuth, validateRfc, (req, res) => {
+    const { newPassword } = req.body;
+    if (!newPassword || newPassword.length < 6) {
+        return res.status(400).json({ success: false, error: 'La contraseña debe tener al menos 6 caracteres' });
+    }
+
+    getInstanceByRfc(req.params.rfc, res, (instance) => {
+        const envPath = path.join(instance.install_path, '.env');
+        if (!fs.existsSync(envPath)) return res.status(404).json({ success: false, error: '.env no encontrado' });
+        
+        try {
+            let envContent = fs.readFileSync(envPath, 'utf8');
+            // Safe replace without bash sed
+            // API_PASSWORD could be plain or wrapped in quotes
+            const regex = /^API_PASSWORD=.*$/m;
+            if (regex.test(envContent)) {
+                envContent = envContent.replace(regex, `API_PASSWORD="${newPassword.replace(/"/g, '\\"')}"`);
+            } else {
+                envContent += `\nAPI_PASSWORD="${newPassword.replace(/"/g, '\\"')}"`;
+            }
+            fs.writeFileSync(envPath, envContent);
+            
+            // Now clear cache and restart
+            execFile('docker', ['compose', 'exec', '-T', 'app', 'php', 'artisan', 'optimize:clear'], { cwd: instance.install_path }, (cacheErr) => {
+                if (cacheErr) {
+                    logAudit(instance.rfc, 'change_api_password', `Error caché: ${cacheErr.message}`);
+                    return res.status(500).json({ success: false, error: 'Error limpiando caché de Laravel', details: cacheErr.message });
+                }
+                
+                execFile('docker', ['compose', 'restart', 'app', 'queue', 'scheduler'], { cwd: instance.install_path }, (restErr) => {
+                    if (restErr) {
+                        logAudit(instance.rfc, 'change_api_password', `Error reinicio: ${restErr.message}`);
+                        return res.status(500).json({ success: false, error: 'Error reiniciando servicios', details: restErr.message });
+                    }
+                    
+                    logAudit(instance.rfc, 'change_api_password', `Éxito: Contraseña API modificada`);
+                    res.json({ success: true, message: 'Contraseña API actualizada exitosamente' });
+                });
+            });
+
+        } catch (e) {
+            logAudit(instance.rfc, 'change_api_password', `Error FS: ${e.message}`);
+            res.status(500).json({ success: false, error: 'Error al escribir .env', details: e.message });
+        }
+    });
 });
 
 app.listen(PORT, '0.0.0.0', () => {
