@@ -30,12 +30,12 @@ class AppServiceProvider extends ServiceProvider
             if ($path && $path !== '/') {
                 $path = rtrim($path, '/');
                 
-                \Livewire\Livewire::setUpdateRoute(function ($handle) use ($path) {
-                    return \Illuminate\Support\Facades\Route::post($path . '/livewire/update', $handle);
+                \Livewire\Livewire::setUpdateRoute(function ($handle) {
+                    return \Illuminate\Support\Facades\Route::post('/livewire/update', $handle);
                 });
 
-                \Livewire\Livewire::setScriptRoute(function ($handle) use ($path) {
-                    return \Illuminate\Support\Facades\Route::get($path . '/livewire/livewire.js', $handle);
+                \Livewire\Livewire::setScriptRoute(function ($handle) {
+                    return \Illuminate\Support\Facades\Route::get('/livewire/livewire.js', $handle);
                 });
 
                 \Illuminate\Support\Facades\URL::forceRootUrl($appUrl);
