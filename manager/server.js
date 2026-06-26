@@ -22,6 +22,13 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
 
+// Initialize Background Job Worker for Compliance
+const SQLiteQueue = require('./compliance/jobs/SQLiteQueue');
+const Worker = require('./compliance/jobs/Worker');
+const queue = new SQLiteQueue();
+const worker = new Worker(queue);
+worker.start();
+
 app.use(session({
     secret: process.env.SESSION_SECRET || 'pui-manager-secret-key-2026',
     resave: false,

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Compliance Center - Dashboard</title>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; }
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 20px; }
+        .card { padding: 20px; border-radius: 8px; color: white; text-align: center; }
+        .critical { background: #e74c3c; }
+        .high { background: #e67e22; }
+        .medium { background: #f1c40f; }
+        .low { background: #3498db; }
+        .menu { margin-bottom: 20px; }
+        .menu a { margin-right: 15px; text-decoration: none; color: #34495e; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="menu">
+            <a href="/compliance/dashboard">Dashboard</a>
+            <a href="/compliance/auditorias">Auditorías</a>
+            <a href="/compliance/evidencias">Evidencias</a>
+            <a href="/compliance/herramientas">Herramientas</a>
+            <a href="/">Volver al Gestor</a>
+        </div>
+        
+        <h1>Compliance Center - Dashboard</h1>
+        
+        <div class="grid">
+            <div class="card critical">
+                <h3>Críticas</h3>
+                <h2>0</h2>
+            </div>
+            <div class="card high">
+                <h3>Altas</h3>
+                <h2>0</h2>
+            </div>
+            <div class="card medium">
+                <h3>Medias</h3>
+                <h2>0</h2>
+            </div>
+            <div class="card low">
+                <h3>Bajas</h3>
+                <h2>0</h2>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

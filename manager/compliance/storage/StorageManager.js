@@ -1,0 +1,52 @@
+const fs = require('fs');
+const path = require('path');
+
+class StorageManager {
+    constructor() {
+        this.baseDir = path.join(__dirname, '..', '..', 'security');
+        if (!fs.existsSync(this.baseDir)) {
+            fs.mkdirSync(this.baseDir, { recursive: true });
+        }
+    }
+
+    createAuditDirectory(auditId) {
+        const date = new Date();
+        const year = date.getFullYear().toString();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        
+        const auditDirName = `audit-${auditId.toString().padStart(6, '0')}`;
+        const fullPath = path.join(this.baseDir, year, month, day, auditDirName);
+
+        if (!fs.existsSync(fullPath)) {
+            fs.mkdirSync(fullPath, { recursive: true });
+            
+            // Create subdirectories
+            ['sast', 'sca', 'dast', 'logs', 'evidencias'].forEach(sub => {
+                fs.mkdirSync(path.join(fullPath, sub));
+            });
+            
+            // Create initial metadata.json
+            const metadata = {
+                audit_id: auditId,
+                date: date.toISOString(),
+                tools: [],
+                status: 'running'
+            };
+            fs.writeFileSync(path.join(fullPath, 'metadata.json'), JSON.stringify(metadata, null, 2));
+        }
+
+        return fullPath;
+    }
+
+    getAuditDirectory(auditId, dateObj) {
+        // Find existing directory based on date. For simplicity, assume date is known or we can glob it.
+        const year = dateObj.getFullYear().toString();
+        const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+        const day = dateObj.getDate().toString().padStart(2, '0');
+        const auditDirName = `audit-${auditId.toString().padStart(6, '0')}`;
+        return path.join(this.baseDir, year, month, day, auditDirName);
+    }
+}
+
+module.exports = StorageManager;

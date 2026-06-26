@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Compliance Center - Herramientas</title>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; }
+        .menu { margin-bottom: 20px; }
+        .menu a { margin-right: 15px; text-decoration: none; color: #34495e; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #f8f9fa; }
+        .status-ok { color: #27ae60; font-weight: bold; }
+        .status-fail { color: #e74c3c; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="menu">
+            <a href="/compliance/dashboard">Dashboard</a>
+            <a href="/compliance/auditorias">Auditorías</a>
+            <a href="/compliance/evidencias">Evidencias</a>
+            <a href="/compliance/herramientas">Herramientas</a>
+            <a href="/compliance/configuracion">Configuración</a>
+            <a href="/">Volver al Gestor</a>
+        </div>
+        
+        <h1>Estado de Herramientas</h1>
+        <p>El Gestor requiere estas herramientas instaladas en el sistema para ejecutar las auditorías.</p>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Herramienta</th>
+                    <th>Estado</th>
+                    <th>Versión</th>
+                    <th>Ruta</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% for (let tool in tools) { %>
+                    <tr>
+                        <td><strong><%= tool %></strong></td>
+                        <td>
+                            <% if (tools[tool].installed) { %>
+                                <span class="status-ok">✔ Instalada</span>
+                            <% } else { %>
+                                <span class="status-fail">✖ No encontrada</span>
+                            <% } %>
+                        </td>
+                        <td><%= tools[tool].version || '-' %></td>
+                        <td><%= tools[tool].path || '-' %></td>
+                    </tr>
+                <% } %>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
