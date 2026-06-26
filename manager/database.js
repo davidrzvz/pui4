@@ -31,6 +31,39 @@ const db = new sqlite3.Database(dbPath, (err) => {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`);
 
+        db.run(`CREATE TABLE IF NOT EXISTS security_code_versions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sha256 TEXT UNIQUE NOT NULL,
+            commit_hash TEXT,
+            branch TEXT,
+            laravel_version TEXT,
+            php_version TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            created_by TEXT
+        )`);
+
+        db.run(`CREATE TABLE IF NOT EXISTS security_audits (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            target_id INTEGER,
+            code_version_id INTEGER,
+            profile TEXT NOT NULL,
+            status TEXT DEFAULT 'pending',
+            vulnerabilities_count INTEGER DEFAULT 0,
+            date DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(target_id) REFERENCES instances(id),
+            FOREIGN KEY(code_version_id) REFERENCES security_code_versions(id)
+        )`);
+
+        db.run(`CREATE TABLE IF NOT EXISTS compliance_jobs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            audit_id INTEGER NOT NULL,
+            status TEXT DEFAULT 'Pending',
+            progress INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(audit_id) REFERENCES security_audits(id)
+        )`);
+
         db.run(`CREATE TABLE IF NOT EXISTS settings (
             key TEXT PRIMARY KEY,
             value TEXT NOT NULL
