@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Compliance Center - Auditorías</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#f4f7f8; margin:0; padding:40px; color:#17384a; }
+    .container { max-width:1200px; margin:auto; background:white; padding:30px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,.08); }
+    nav a { margin-right:18px; font-weight:bold; color:#17384a; text-decoration:none; }
+    h1 { margin-top:25px; }
+    .card { border:1px solid #e2e8f0; border-radius:8px; padding:22px; margin-top:20px; }
+    .actions { display:flex; gap:15px; margin-top:20px; }
+    .btn { background:#17384a; color:white; padding:12px 18px; border-radius:6px; text-decoration:none; display:inline-block; }
+    .btn.secondary { background:#64748b; }
+    table { width:100%; border-collapse:collapse; margin-top:20px; }
+    th, td { padding:12px; border-bottom:1px solid #e2e8f0; text-align:left; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav>
+      <a href="/compliance/dashboard">Dashboard</a>
+      <a href="/compliance/auditorias">Auditorías</a>
+      <a href="/compliance/evidencias">Evidencias</a>
+      <a href="/compliance/herramientas">Herramientas</a>
+      <a href="/compliance/configuracion">Configuración</a>
+      <a href="/">Volver al Gestor</a>
+    </nav>
+
+    <h1>Compliance Center - Auditorías</h1>
+    <p>Desde aquí se ejecutarán auditorías de código SAST/SCA y auditorías de instancia DAST.</p>
+
+    <div class="card">
+      <h2>Nueva Auditoría</h2>
+      <p>Selecciona el tipo de auditoría que deseas ejecutar.</p>
+      <div class="actions">
+        <a class="btn" href="#">Auditoría de Código SAST/SCA</a>
+        <a class="btn secondary" href="#">Auditoría de Instancia DAST</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Historial</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Tipo</th>
+            <th>Instancia</th>
+            <th>Estado</th>
+            <th>Evidencia</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colspan="5">Aún no hay auditorías registradas.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

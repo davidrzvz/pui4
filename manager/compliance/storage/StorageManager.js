@@ -3,7 +3,7 @@ const path = require('path');
 
 class StorageManager {
     constructor() {
-        this.baseDir = path.join(__dirname, '..', '..', 'security');
+        this.baseDir = path.join(process.cwd(), 'data', 'security');
         if (!fs.existsSync(this.baseDir)) {
             fs.mkdirSync(this.baseDir, { recursive: true });
         }
