@@ -8,25 +8,14 @@ const ToolRegistry = require('../engine/ToolRegistry');
 class ReportGenerator {
     constructor(storageManager) {
         this.storageManager = storageManager;
-        this.templatesDir = path.join(__dirname, '..', '..', 'views', 'compliance', 'reports');
-        if (!fs.existsSync(this.templatesDir)) {
-            fs.mkdirSync(this.templatesDir, { recursive: true });
-        }
     }
 
     async generateReports(auditId, auditData, dateObj) {
         const auditDir = this.storageManager.getAuditDirectory(auditId, dateObj);
         
-        // Ensure templates exist
-        const execTemplatePath = path.join(this.templatesDir, 'executive.ejs');
-        const techTemplatePath = path.join(this.templatesDir, 'technical.ejs');
-        
-        this._ensureBasicTemplate(execTemplatePath, 'Executive Report');
-        this._ensureBasicTemplate(techTemplatePath, 'Technical Report');
-
-        // Render HTML
-        const execHtml = await ejs.renderFile(execTemplatePath, { audit: auditData });
-        const techHtml = await ejs.renderFile(techTemplatePath, { audit: auditData });
+        // Render HTML from strings directly without writing to /views
+        const execHtml = ejs.render(this._getBasicTemplate('Executive Report'), { audit: auditData });
+        const techHtml = ejs.render(this._getBasicTemplate('Technical Report'), { audit: auditData });
 
         // Write HTML files
         const execHtmlPath = path.join(auditDir, 'executive-report.html');
@@ -146,29 +135,27 @@ class ReportGenerator {
         });
     }
 
-    _ensureBasicTemplate(templatePath, title) {
-        if (!fs.existsSync(templatePath)) {
-            fs.writeFileSync(templatePath, `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>${title}</title>
-                    <style>
-                        body { font-family: sans-serif; padding: 40px; }
-                        h1 { color: #2c3e50; }
-                    </style>
-                </head>
-                <body>
-                    <h1>${title}</h1>
-                    <p>Audit ID: <%= audit.id || 'N/A' %></p>
-                    <p>Date: <%= audit.date || new Date().toISOString() %></p>
-                    <h2>Findings Summary</h2>
-                    <p>Vulnerabilities: <%= audit.vulnerabilities_count || 0 %></p>
-                    <p>Status: <%= audit.status || 'Finished' %></p>
-                </body>
-                </html>
-            `);
-        }
+    _getBasicTemplate(title) {
+        return `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>${title}</title>
+                <style>
+                    body { font-family: sans-serif; padding: 40px; }
+                    h1 { color: #2c3e50; }
+                </style>
+            </head>
+            <body>
+                <h1>${title}</h1>
+                <p>Audit ID: <%= audit.id || 'N/A' %></p>
+                <p>Date: <%= audit.date || new Date().toISOString() %></p>
+                <h2>Findings Summary</h2>
+                <p>Vulnerabilities: <%= audit.vulnerabilities_count || 0 %></p>
+                <p>Status: <%= audit.status || 'Finished' %></p>
+            </body>
+            </html>
+        `;
     }
 }
 
