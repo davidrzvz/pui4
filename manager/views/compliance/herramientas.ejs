@@ -44,10 +44,10 @@
                     <tr>
                         <td><strong><%= tool %></strong></td>
                         <td>
-                            <% if (tools[tool].installed) { %>
+                            <% if (tools[tool].status === 'installed') { %>
                                 <span class="status-ok">✔ Instalada</span>
                             <% } else { %>
-                                <span class="status-fail">✖ No encontrada</span>
+                                <span class="status-fail">✖ Missing / Warning</span>
                             <% } %>
                         </td>
                         <td><%= tools[tool].version || '-' %></td>
