@@ -75,14 +75,22 @@
             const date = new Date(audit.date).toLocaleString();
             let statusClass = (audit.status.toLowerCase() === 'finished') ? 'status-finished' : 'status-failed';
             
-            // Generate download links based on id
-            const downloadLinks = `
-              <div class="download-links">
-                <a href="/compliance/api/evidences/${audit.id}/zip">⬇️ Paquete ZIP</a>
-                <a href="/compliance/api/evidences/${audit.id}/executive">📄 Reporte Ejecutivo</a>
-                <a href="/compliance/api/evidences/${audit.id}/technical">📄 Reporte Técnico</a>
-              </div>
-            `;
+            // Generate download links or regenerate button based on evidence_complete
+            let actionHtml = '';
+            if (audit.evidence_complete) {
+                actionHtml = `
+                  <div class="download-links">
+                    <a href="/compliance/api/evidences/${audit.id}/zip">⬇️ Paquete ZIP</a>
+                    <a href="/compliance/api/evidences/${audit.id}/executive">📄 Reporte Ejecutivo</a>
+                    <a href="/compliance/api/evidences/${audit.id}/technical">📄 Reporte Técnico</a>
+                  </div>
+                `;
+            } else {
+                actionHtml = `
+                  <span style="color: #ef4444; font-size: 13px; margin-right: 10px;">Evidencia pendiente de regenerar</span>
+                  <button onclick="regenerateEvidence(${audit.id})" style="padding:4px 8px; background:#3b82f6; color:white; border:none; border-radius:4px; cursor:pointer;">Regenerar evidencia</button>
+                `;
+            }
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -90,7 +98,7 @@
               <td>${date}</td>
               <td>${audit.profile}</td>
               <td><span class="status-badge ${statusClass}">${audit.status}</span></td>
-              <td>${downloadLinks}</td>
+              <td>${actionHtml}</td>
             `;
             tbody.appendChild(tr);
           });
@@ -99,6 +107,24 @@
         }
       } catch (error) {
         console.error('Error fetching evidences:', error);
+      }
+    }
+
+    async function regenerateEvidence(auditId) {
+      if(!confirm('¿Deseas regenerar la evidencia para esta auditoría?')) return;
+      try {
+        const res = await fetch(\`/compliance/api/evidences/\${auditId}/regenerate\`, {
+          method: 'POST'
+        });
+        const data = await res.json();
+        if(data.success) {
+          alert('Regeneración encolada correctamente.');
+          fetchEvidences();
+        } else {
+          alert('Error: ' + data.error);
+        }
+      } catch (e) {
+        alert('Error en la petición');
       }
     }
 

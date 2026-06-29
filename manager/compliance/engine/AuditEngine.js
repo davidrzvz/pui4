@@ -15,12 +15,36 @@ class AuditEngine {
         const existingVersion = await this._getCodeVersionByHash(codeHash);
         
         if (existingVersion) {
-            // Inform that we can reuse
-            return {
-                reusable: true,
-                code_version_id: existingVersion.id,
-                message: 'This code version has already been certified.'
-            };
+            // Find latest audit for this code version
+            const latestAudit = await this._getLatestAuditForCodeVersion(existingVersion.id);
+            if (latestAudit) {
+                // Verify physical evidence
+                const isComplete = this.storageManager.isEvidenceComplete(latestAudit.id, new Date(latestAudit.date));
+                if (isComplete) {
+                    return {
+                        reusable: true,
+                        code_version_id: existingVersion.id,
+                        auditId: latestAudit.id,
+                        message: 'This code version has already been certified.'
+                    };
+                } else {
+                    // Recreate audit since evidence is missing
+                    const newAuditId = await this._createAuditRecord(targetId, existingVersion.id, 'Code Audit');
+                    return {
+                        reusable: false,
+                        auditId: newAuditId,
+                        message: 'Code version already exists, but evidence is missing. Evidence regeneration has been queued.'
+                    };
+                }
+            } else {
+                // Code version exists but no audit record found, create one
+                const newAuditId = await this._createAuditRecord(targetId, existingVersion.id, 'Code Audit');
+                return {
+                    reusable: false,
+                    auditId: newAuditId,
+                    message: 'Code version exists, creating new audit.'
+                };
+            }
         }
 
         // 2. Create new code version entry
@@ -56,6 +80,15 @@ class AuditEngine {
     _getCodeVersionByHash(sha256) {
         return new Promise((resolve, reject) => {
             db.get('SELECT * FROM security_code_versions WHERE sha256 = ?', [sha256], (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+            });
+        });
+    }
+
+    _getLatestAuditForCodeVersion(codeVersionId) {
+        return new Promise((resolve, reject) => {
+            db.get('SELECT * FROM security_audits WHERE code_version_id = ? ORDER BY id DESC LIMIT 1', [codeVersionId], (err, row) => {
                 if (err) reject(err);
                 else resolve(row);
             });

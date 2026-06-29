@@ -47,6 +47,26 @@ class StorageManager {
         const auditDirName = `audit-${auditId.toString().padStart(6, '0')}`;
         return path.join(this.baseDir, year, month, day, auditDirName);
     }
+
+    isEvidenceComplete(auditId, dateObj) {
+        const auditDir = this.getAuditDirectory(auditId, dateObj);
+        if (!fs.existsSync(auditDir)) return false;
+
+        const requiredFiles = [
+            'metadata.json',
+            'manifest.json',
+            'executive-report.html',
+            'technical-report.html',
+            'security-report.zip'
+        ];
+
+        for (const file of requiredFiles) {
+            if (!fs.existsSync(path.join(auditDir, file))) {
+                return false;
+            }
+        }
+        return true;
+    }
 }
 
 module.exports = StorageManager;

@@ -76,8 +76,28 @@ router.get('/api/audits/history', (req, res) => {
         ORDER BY sa.date DESC
     `, [], (err, rows) => {
         if (err) return res.status(500).json({ success: false, error: err.message });
-        res.json({ success: true, data: rows });
+        
+        // Add evidence_complete flag
+        const results = rows.map(row => {
+            let evidenceComplete = false;
+            if (row.status === 'Finished' || row.status === 'finished' || row.status === 'Failed' || row.status === 'failed') {
+                evidenceComplete = storageManager.isEvidenceComplete(row.id, new Date(row.date));
+            }
+            return { ...row, evidence_complete: evidenceComplete };
+        });
+        
+        res.json({ success: true, data: results });
     });
+});
+
+router.post('/api/evidences/:id/regenerate', async (req, res) => {
+    const auditId = req.params.id;
+    try {
+        await jobDispatcher.dispatch({ auditId });
+        res.json({ success: true, message: "Regeneration queued." });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
 });
 
 router.get('/api/instances', (req, res) => {
