@@ -49,6 +49,10 @@ class Worker {
             const audit = await this._getAuditDetails(job.audit_id);
             if (!audit) throw new Error("Audit record not found");
 
+            // Ensure audit directory is created early
+            const storageManager = new (require('../storage/StorageManager'))();
+            storageManager.createAuditDirectory(audit.id);
+
             // Execute the appropriate scanners via ScannerManager based on profile/type
             // For now, this is a skeleton simulation.
             // In the full implementation, ScannerManager will instantiate the correct Adapters.
@@ -57,6 +61,23 @@ class Worker {
 
             // Simulate work
             await new Promise(resolve => setTimeout(resolve, 5000));
+
+            // Generate reports
+            const ReportGenerator = require('../reports/ReportGenerator');
+            const reportGen = new ReportGenerator(storageManager);
+            
+            const auditData = {
+                id: audit.id,
+                date: audit.date,
+                profile: audit.profile,
+                vulnerabilities_count: audit.vulnerabilities_count || 0,
+                status: 'Finished',
+                toolsUsed: ['Simulated-Tool'],
+                toolVersions: { 'Simulated-Tool': '1.0' },
+                durationMs: 5000
+            };
+            
+            await reportGen.generateReports(audit.id, auditData, new Date(audit.date));
 
             // Mark as finished
             await this.queue.updateStatus(job.id, 'Finished', 100);
@@ -68,6 +89,29 @@ class Worker {
             console.error(`Error processing job ${job.id}:`, error);
             await this.queue.updateStatus(job.id, 'Failed', 0);
             await this._updateAuditStatus(job.audit_id, 'failed');
+            
+            // Generate failed reports
+            try {
+                const storageManager = new (require('../storage/StorageManager'))();
+                const ReportGenerator = require('../reports/ReportGenerator');
+                const reportGen = new ReportGenerator(storageManager);
+                const audit = await this._getAuditDetails(job.audit_id);
+                if (audit) {
+                    const auditData = {
+                        id: audit.id,
+                        date: audit.date,
+                        profile: audit.profile,
+                        vulnerabilities_count: 0,
+                        status: 'Failed',
+                        toolsUsed: [],
+                        toolVersions: {},
+                        durationMs: 0
+                    };
+                    await reportGen.generateReports(audit.id, auditData, new Date(audit.date));
+                }
+            } catch (e) {
+                console.error("Failed to generate error evidence:", e);
+            }
         }
     }
 

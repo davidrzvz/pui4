@@ -87,6 +87,54 @@ router.get('/api/instances', (req, res) => {
     });
 });
 
+router.get('/api/evidences/:id/zip', (req, res) => {
+    const auditId = req.params.id;
+    db.get(`SELECT date FROM security_audits WHERE id = ?`, [auditId], (err, row) => {
+        if (err || !row) return res.status(404).json({ success: false, error: "Evidence not generated" });
+        const auditDir = storageManager.getAuditDirectory(auditId, new Date(row.date));
+        const filePath = require('path').join(auditDir, 'security-report.zip');
+        if (require('fs').existsSync(filePath)) {
+            res.download(filePath, `audit-${auditId}-security-report.zip`);
+        } else {
+            res.status(404).json({ success: false, error: "Evidence not generated" });
+        }
+    });
+});
+
+router.get('/api/evidences/:id/executive', (req, res) => {
+    const auditId = req.params.id;
+    db.get(`SELECT date FROM security_audits WHERE id = ?`, [auditId], (err, row) => {
+        if (err || !row) return res.status(404).json({ success: false, error: "Evidence not generated" });
+        const auditDir = storageManager.getAuditDirectory(auditId, new Date(row.date));
+        const pdfPath = require('path').join(auditDir, 'executive-report.pdf');
+        const htmlPath = require('path').join(auditDir, 'executive-report.html');
+        if (require('fs').existsSync(pdfPath)) {
+            res.sendFile(pdfPath);
+        } else if (require('fs').existsSync(htmlPath)) {
+            res.sendFile(htmlPath);
+        } else {
+            res.status(404).json({ success: false, error: "Evidence not generated" });
+        }
+    });
+});
+
+router.get('/api/evidences/:id/technical', (req, res) => {
+    const auditId = req.params.id;
+    db.get(`SELECT date FROM security_audits WHERE id = ?`, [auditId], (err, row) => {
+        if (err || !row) return res.status(404).json({ success: false, error: "Evidence not generated" });
+        const auditDir = storageManager.getAuditDirectory(auditId, new Date(row.date));
+        const pdfPath = require('path').join(auditDir, 'technical-report.pdf');
+        const htmlPath = require('path').join(auditDir, 'technical-report.html');
+        if (require('fs').existsSync(pdfPath)) {
+            res.sendFile(pdfPath);
+        } else if (require('fs').existsSync(htmlPath)) {
+            res.sendFile(htmlPath);
+        } else {
+            res.status(404).json({ success: false, error: "Evidence not generated" });
+        }
+    });
+});
+
 router.get('/evidencias', (req, res) => {
     res.render('compliance/evidencias', { activeMenu: 'compliance' });
 });
