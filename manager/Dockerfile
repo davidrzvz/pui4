@@ -1,6 +1,17 @@
-FROM node:20-alpine
+FROM node:20-bullseye
 
-RUN apk add --no-cache docker-cli docker-cli-compose git bash curl openssl openssh-client python3 make g++ gcc
+RUN apt-get update && apt-get install -y \
+    docker.io \
+    docker-compose \
+    git \
+    bash \
+    curl \
+    openssl \
+    openssh-client \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /root/.ssh && \
     ssh-keyscan github.com >> /root/.ssh/known_hosts && \
