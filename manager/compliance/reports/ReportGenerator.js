@@ -93,7 +93,7 @@ class ReportGenerator {
             const packagePath = await this._createSystemPackage(auditDir);
             
             if (!packagePath) {
-                throw new Error("Package generation failed (zip/tar missing or failed)");
+                console.log(`[Warning] Package generation failed (zip/tar missing or failed) for Audit ${auditId}. Evidence is valid as a folder.`);
             }
 
             return packagePath;
@@ -165,17 +165,49 @@ class ReportGenerator {
             <head>
                 <title>${title}</title>
                 <style>
-                    body { font-family: sans-serif; padding: 40px; }
-                    h1 { color: #2c3e50; }
+                    body { font-family: sans-serif; padding: 40px; color: #333; }
+                    h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+                    h2 { color: #2980b9; margin-top: 30px; }
+                    .section { background: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+                    .missing { color: #e74c3c; font-style: italic; }
+                    .metadata { background: #ecf0f1; padding: 15px; border-radius: 5px; }
                 </style>
             </head>
             <body>
                 <h1>${title}</h1>
-                <p>Audit ID: <%= audit.id || 'N/A' %></p>
-                <p>Date: <%= audit.date || new Date().toISOString() %></p>
-                <h2>Findings Summary</h2>
-                <p>Vulnerabilities: <%= audit.vulnerabilities_count || 0 %></p>
-                <p>Status: <%= audit.status || 'Finished' %></p>
+                <div class="metadata">
+                    <p><strong>Audit ID:</strong> <%= audit.id || 'N/A' %></p>
+                    <p><strong>Date:</strong> <%= audit.date || new Date().toISOString() %></p>
+                    <p><strong>Status:</strong> <%= audit.status || 'Finished' %></p>
+                    <p><strong>Total Vulnerabilities:</strong> <%= audit.vulnerabilities_count || 0 %></p>
+                </div>
+
+                <h2>1. Static Application Security Testing (SAST)</h2>
+                <div class="section">
+                    <% if (audit.toolsUsed && audit.toolsUsed.includes('SAST')) { %>
+                        <p>Análisis de código estático completado.</p>
+                    <% } else { %>
+                        <p class="missing">No ejecutado por herramienta faltante.</p>
+                    <% } %>
+                </div>
+
+                <h2>2. Software Composition Analysis (SCA)</h2>
+                <div class="section">
+                    <% if (audit.toolsUsed && audit.toolsUsed.includes('SCA')) { %>
+                        <p>Análisis de dependencias de terceros completado.</p>
+                    <% } else { %>
+                        <p class="missing">No ejecutado por herramienta faltante.</p>
+                    <% } %>
+                </div>
+
+                <h2>3. Dynamic Application Security Testing (DAST)</h2>
+                <div class="section">
+                    <% if (audit.toolsUsed && audit.toolsUsed.includes('DAST')) { %>
+                        <p>Análisis dinámico de instancia en ejecución completado.</p>
+                    <% } else { %>
+                        <p class="missing">No ejecutado por herramienta faltante.</p>
+                    <% } %>
+                </div>
             </body>
             </html>
         `;
