@@ -110,7 +110,7 @@ router.post('/api/evidences/:id/regenerate', async (req, res) => {
                 durationMs: 0
             };
             
-            const auditDir = storageManager.getAuditDirectory(audit.id, new Date(audit.date));
+            const auditDir = storageManager.getOrCreateAuditDirectory(audit.id, new Date(audit.date));
             const metadataPath = require('path').join(auditDir, 'metadata.json');
             const fs = require('fs');
             if (fs.existsSync(metadataPath)) {

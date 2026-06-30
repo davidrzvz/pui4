@@ -14,6 +14,15 @@ class ReportGenerator {
         const auditDir = this.storageManager.getAuditDirectory(auditId, dateObj);
         
         try {
+            // Defensive directory creation
+            if (!fs.existsSync(auditDir)) {
+                fs.mkdirSync(auditDir, { recursive: true });
+            }
+            const logsDir = path.join(auditDir, 'logs');
+            if (!fs.existsSync(logsDir)) {
+                fs.mkdirSync(logsDir, { recursive: true });
+            }
+
             // Render HTML from strings directly without writing to /views
             const execHtml = ejs.render(this._getBasicTemplate('Executive Report'), { audit: auditData });
             const techHtml = ejs.render(this._getBasicTemplate('Technical Report'), { audit: auditData });
