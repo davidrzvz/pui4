@@ -1,0 +1,17 @@
+{
+  "target": "Test Company (TEST999)",
+  "type": "SAST",
+  "tool": "Semgrep (Docker)",
+  "config": "Default Ruleset",
+  "status": "Fallido",
+  "date": "6/30/2026, 1:06:08 PM",
+  "duration": "634 ms",
+  "findings": [
+    {
+      "title": "Error de Ejecución o Validación",
+      "severity": "High",
+      "description": "No se pudo ejecutar SAST: Command failed: docker run --rm -v /tmp/dummy-instance:/src returntocorp/semgrep semgrep scan --json /src\nCannot connect to the Docker daemon at unix:///Users/EQTC3614DAVID/.docker/run/docker.sock. Is the docker daemon running?\n",
+      "recommendation": "Verificar la ruta del proyecto y conectividad Docker."
+    }
+  ]
+}

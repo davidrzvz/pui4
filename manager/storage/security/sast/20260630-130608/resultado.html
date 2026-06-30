@@ -1,0 +1,53 @@
+
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+                <meta charset="UTF-8">
+                <title>Reporte de Seguridad - SAST</title>
+                <style>
+                    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px; color: #333; line-height: 1.6; }
+                    h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; margin-bottom: 30px; }
+                    h2 { color: #2980b9; margin-top: 40px; border-bottom: 1px solid #bdc3c7; padding-bottom: 5px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+                    th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+                    th { background-color: #ecf0f1; color: #2c3e50; }
+                    .metadata-table th { width: 30%; }
+                    .finding { background: #f9f9f9; padding: 20px; border-left: 5px solid #e74c3c; margin-bottom: 20px; }
+                    .finding h3 { margin-top: 0; color: #e74c3c; }
+                    .severity-high { color: #c0392b; font-weight: bold; }
+                    .severity-medium { color: #d35400; font-weight: bold; }
+                    .severity-low { color: #f39c12; font-weight: bold; }
+                </style>
+            </head>
+            <body>
+                <h1>Reporte de Seguridad SAST</h1>
+                
+                <h2>1. Información del Proyecto</h2>
+                <table class="metadata-table">
+                    <tr><th>Instancia Objetivo</th><td>Test Company (TEST999)</td></tr>
+                    <tr><th>Fecha de Ejecución</th><td>6/30/2026, 1:06:08 PM</td></tr>
+                    <tr><th>Herramienta Utilizada</th><td>Semgrep (Docker)</td></tr>
+                    <tr><th>Configuración / Reglas</th><td>Default Ruleset</td></tr>
+                    <tr><th>Duración</th><td>634 ms</td></tr>
+                </table>
+
+                <h2>2. Resumen Ejecutivo</h2>
+                <p>El análisis de seguridad tipo <strong>SAST</strong> utilizando la herramienta <strong>Semgrep (Docker)</strong> finalizó con el estado: <strong>Fallido</strong>.</p>
+                <p>Se encontraron un total de <strong>1</strong> hallazgos de seguridad.</p>
+
+                <h2>3. Hallazgos Detallados</h2>
+                
+                    
+                        <div class="finding">
+                            <h3>Hallazgo #1: Error de Ejecución o Validación</h3>
+                            <p><strong>Severidad:</strong> <span class="severity-high">High</span></p>
+                            <p><strong>Descripción:</strong> No se pudo ejecutar SAST: Command failed: docker run --rm -v /tmp/dummy-instance:/src returntocorp/semgrep semgrep scan --json /src
+Cannot connect to the Docker daemon at unix:///Users/EQTC3614DAVID/.docker/run/docker.sock. Is the docker daemon running?
+</p>
+                            <p><strong>Recomendaciones:</strong> Verificar la ruta del proyecto y conectividad Docker.</p>
+                        </div>
+                    
+                
+            </body>
+            </html>
+        
