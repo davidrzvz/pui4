@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const ejs = require('ejs');
 const crypto = require('crypto');
-const archiver = require('archiver');
+const { execSync } = require('child_process');
 const ToolRegistry = require('../engine/ToolRegistry');
 
 class ReportGenerator {
@@ -12,7 +12,6 @@ class ReportGenerator {
 
     async generateReports(auditId, auditData, dateObj) {
         const auditDir = this.storageManager.getAuditDirectory(auditId, dateObj);
-        const zipPath = path.join(auditDir, 'security-report.zip');
         
         try {
             // Render HTML from strings directly without writing to /views
@@ -90,18 +89,20 @@ class ReportGenerator {
             
             fs.writeFileSync(path.join(auditDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
             
-            // Final Zip (do not hash the zip inside the manifest, just add it to folder)
-            await this._createZip(auditDir, zipPath);
+            // Final Archive (use system commands, fallback to tar)
+            const packagePath = await this._createSystemPackage(auditDir);
             
-            const stats = fs.statSync(zipPath);
-            if (stats.size === 0) throw new Error("ZIP file generated is empty");
+            if (!packagePath) {
+                throw new Error("Package generation failed (zip/tar missing or failed)");
+            }
 
-            return zipPath;
+            return packagePath;
         } catch (error) {
             console.error(`[Error] Failed to generate complete reports for Audit ${auditId}:`, error);
-            if (fs.existsSync(zipPath)) {
-                fs.unlinkSync(zipPath); // Cleanup corrupted/empty ZIP
-            }
+            const zipPath = path.join(auditDir, 'security-report.zip');
+            const tarPath = path.join(auditDir, 'security-report.tar.gz');
+            if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath); // Cleanup corrupted ZIP
+            if (fs.existsSync(tarPath)) fs.unlinkSync(tarPath); // Cleanup corrupted TAR
             throw error; // Propagate to mark evidence as incomplete
         }
     }
@@ -121,30 +122,32 @@ class ReportGenerator {
         await browser.close();
     }
 
-    _createZip(sourceDir, outPath) {
-        return new Promise((resolve, reject) => {
-            const output = fs.createWriteStream(outPath);
-            const archive = archiver('zip', { zlib: { level: 9 } });
+    async _createSystemPackage(sourceDir) {
+        const zipPath = path.join(sourceDir, 'security-report.zip');
+        const tarPath = path.join(sourceDir, 'security-report.tar.gz');
+        
+        try {
+            // 1. Try ZIP
+            execSync('zip -r security-report.zip . -x "security-report.*"', { cwd: sourceDir, stdio: 'ignore' });
+            if (fs.existsSync(zipPath) && fs.statSync(zipPath).size > 0) {
+                return zipPath;
+            }
+        } catch (e) {
+            console.log(`[Warning] zip command failed or not found in ${sourceDir}`);
+        }
 
-            output.on('close', () => resolve());
-            archive.on('error', (err) => reject(err));
+        try {
+            // 2. Fallback to TAR
+            execSync('tar -czf security-report.tar.gz --exclude="security-report.*" .', { cwd: sourceDir, stdio: 'ignore' });
+            if (fs.existsSync(tarPath) && fs.statSync(tarPath).size > 0) {
+                return tarPath;
+            }
+        } catch (e) {
+            console.log(`[Warning] tar command failed or not found in ${sourceDir}`);
+        }
 
-            archive.pipe(output);
-
-            // Append all files except the zip itself
-            fs.readdirSync(sourceDir).forEach(file => {
-                if (file !== 'security-report.zip') {
-                    const fullPath = path.join(sourceDir, file);
-                    if (fs.statSync(fullPath).isDirectory()) {
-                        archive.directory(fullPath, file);
-                    } else {
-                        archive.file(fullPath, { name: file });
-                    }
-                }
-            });
-
-            archive.finalize();
-        });
+        // 3. Mark as missing if both fail
+        return null;
     }
 
     _getBasicTemplate(title) {

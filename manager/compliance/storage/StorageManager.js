@@ -55,8 +55,7 @@ class StorageManager {
             'metadata.json',
             'manifest.json',
             'executive-report.html',
-            'technical-report.html',
-            'security-report.zip'
+            'technical-report.html'
         ];
 
         for (const file of requiredFiles) {
@@ -64,7 +63,11 @@ class StorageManager {
                 return false;
             }
         }
-        return true;
+        
+        const hasZip = fs.existsSync(path.join(auditDir, 'security-report.zip'));
+        const hasTar = fs.existsSync(path.join(auditDir, 'security-report.tar.gz'));
+        
+        return hasZip || hasTar;
     }
 }
 

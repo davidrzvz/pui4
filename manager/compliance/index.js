@@ -112,14 +112,19 @@ router.get('/api/evidences/:id/zip', (req, res) => {
     db.get(`SELECT date FROM security_audits WHERE id = ?`, [auditId], (err, row) => {
         if (err || !row) return res.status(404).json({ success: false, error: "Evidence not generated" });
         const auditDir = storageManager.getAuditDirectory(auditId, new Date(row.date));
-        const filePath = require('path').join(auditDir, 'security-report.zip');
+        
+        const zipPath = require('path').join(auditDir, 'security-report.zip');
+        const tarPath = require('path').join(auditDir, 'security-report.tar.gz');
         const fs = require('fs');
-        if (fs.existsSync(filePath)) {
-            const stats = fs.statSync(filePath);
-            if (stats.size > 0) {
-                return res.download(filePath, `audit-${auditId}-security-report.zip`);
-            }
+        
+        if (fs.existsSync(zipPath) && fs.statSync(zipPath).size > 0) {
+            return res.download(zipPath, `audit-${auditId}-security-report.zip`);
         }
+        
+        if (fs.existsSync(tarPath) && fs.statSync(tarPath).size > 0) {
+            return res.download(tarPath, `audit-${auditId}-security-report.tar.gz`);
+        }
+        
         res.status(404).json({ success: false, error: "Evidence not generated or incomplete" });
     });
 });
