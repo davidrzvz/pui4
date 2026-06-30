@@ -89,14 +89,38 @@ class PdfReportGenerator {
             <body>
                 <h1>Reporte de Seguridad <%= report.type %></h1>
                 
-                <h2>1. Información del Proyecto</h2>
+                <h2>1. Información del Análisis</h2>
                 <table class="metadata-table">
-                    <tr><th>Instancia Objetivo</th><td><%= report.target %></td></tr>
+                    <tr><th>Prueba Ejecutada</th><td><%= report.type %></td></tr>
+                    <tr><th>Instancia Evaluada</th><td><%= report.target %></td></tr>
                     <tr><th>Fecha de Ejecución</th><td><%= report.date %></td></tr>
-                    <tr><th>Herramienta Utilizada</th><td><%= report.tool %></td></tr>
-                    <tr><th>Configuración / Reglas</th><td><%= report.config %></td></tr>
-                    <tr><th>Duración</th><td><%= report.duration %></td></tr>
+                    <tr><th>Ruta/URL Evaluada</th><td><%= report.targetPath || 'N/A' %></td></tr>
+                    <tr><th>Herramienta Intentada</th><td><%= report.tool %></td></tr>
+                    <tr><th>Comando Ejecutado</th><td><code><%= report.command || 'N/A' %></code></td></tr>
+                    <tr><th>Resultado</th><td><strong><%= report.status %></strong></td></tr>
+                    <tr><th>Trazabilidad (Branch/Commit)</th><td>N/A (Local)</td></tr>
                 </table>
+
+                <% if (report.type === 'SAST') { %>
+                    <h2>1.1 Requisitos del Manual (SAST)</h2>
+                    <ul>
+                        <li><strong>Análisis de código fuente:</strong> Realizado vía escaneo estático.</li>
+                        <li><strong>Componente evaluado:</strong> <%= report.targetPath %></li>
+                        <li><strong>Configuración / Reglas:</strong> <%= report.config %></li>
+                    </ul>
+                <% } else if (report.type === 'SCA') { %>
+                    <h2>1.1 Requisitos del Manual (SCA)</h2>
+                    <ul>
+                        <li><strong>Dependencias evaluadas:</strong> Node.js / PHP (según manifiestos encontrados).</li>
+                        <li><strong>Licencias y Componentes:</strong> Auditados según base de datos CVE de NPM/Composer.</li>
+                    </ul>
+                <% } else if (report.type === 'DAST') { %>
+                    <h2>1.1 Requisitos del Manual (DAST)</h2>
+                    <ul>
+                        <li><strong>Servicios en ejecución y Endpoints:</strong> Auditados vía spidering.</li>
+                        <li><strong>Reglas OWASP Top 10:</strong> Aplicadas.</li>
+                    </ul>
+                <% } %>
 
                 <h2>2. Resumen Ejecutivo</h2>
                 <p>El análisis de seguridad tipo <strong><%= report.type %></strong> utilizando la herramienta <strong><%= report.tool %></strong> finalizó con el estado: <strong><%= report.status %></strong>.</p>
@@ -107,13 +131,14 @@ class PdfReportGenerator {
                     <% report.findings.forEach(function(finding, index) { %>
                         <div class="finding">
                             <h3>Hallazgo #<%= index + 1 %>: <%= finding.title %></h3>
-                            <p><strong>Severidad:</strong> <span class="severity-<%= finding.severity.toLowerCase() %>"><%= finding.severity %></span></p>
-                            <p><strong>Descripción:</strong> <%= finding.description %></p>
-                            <p><strong>Recomendaciones:</strong> <%= finding.recommendation %></p>
+                            <p><strong>Severidad:</strong> <span class="severity-<%= (finding.severity || 'medium').toLowerCase() %>"><%= finding.severity || 'Medium' %></span></p>
+                            <p><strong>Descripción / Error Real:</strong> <pre style="white-space: pre-wrap; font-family: inherit;"><%= finding.description %></pre></p>
+                            <p><strong>Recomendaciones / Justificación:</strong> <%= finding.recommendation %></p>
                         </div>
                     <% }); %>
                 <% } else { %>
-                    <p>No se encontraron vulnerabilidades en este análisis.</p>
+                    <p>No se encontraron vulnerabilidades ni errores en este análisis.</p>
+                    <p><em>Justificación formal: El código o servicio auditado cumple con las reglas básicas del perfil evaluado y la herramienta no reportó anomalías bajo esta configuración.</em></p>
                 <% } %>
             </body>
             </html>

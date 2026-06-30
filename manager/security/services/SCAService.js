@@ -38,7 +38,7 @@ class SCAService {
             }
 
             // Descubrir contenedores corriendo dinámicamente
-            const { stdout } = await execFilePromise('docker', ['compose', 'ps', '--format', 'json'], { cwd: installPath });
+            const { stdout } = await execFilePromise('docker', ['compose', 'ps', '--format', 'json'], { cwd: installPath, timeout: 120000 });
             
             let services = [];
             if (stdout) {
@@ -59,14 +59,14 @@ class SCAService {
                 // Probar PHP
                 if (!phpContainer) {
                     try {
-                        await execFilePromise('docker', ['compose', 'exec', '-T', srvName, 'php', '-v'], { cwd: installPath });
+                        await execFilePromise('docker', ['compose', 'exec', '-T', srvName, 'php', '-v'], { cwd: installPath, timeout: 10000 });
                         phpContainer = srvName;
                     } catch (e) {}
                 }
                 // Probar NPM
                 if (!npmContainer) {
                     try {
-                        await execFilePromise('docker', ['compose', 'exec', '-T', srvName, 'npm', '-v'], { cwd: installPath });
+                        await execFilePromise('docker', ['compose', 'exec', '-T', srvName, 'npm', '-v'], { cwd: installPath, timeout: 10000 });
                         npmContainer = srvName;
                     } catch (e) {}
                 }
@@ -84,7 +84,7 @@ class SCAService {
                 } else {
                     toolsUsed.push('Composer Audit');
                     try {
-                        await execFilePromise('docker', ['compose', 'exec', '-T', phpContainer, 'composer', 'audit', '--format=json'], { cwd: installPath });
+                        await execFilePromise('docker', ['compose', 'exec', '-T', phpContainer, 'composer', 'audit', '--format=json'], { cwd: installPath, timeout: 120000 });
                     } catch (composerErr) {
                         if (composerErr.stdout) {
                             try {
@@ -123,7 +123,7 @@ class SCAService {
                 } else {
                     toolsUsed.push('npm audit');
                     try {
-                        await execFilePromise('docker', ['compose', 'exec', '-T', npmContainer, 'npm', 'audit', '--json'], { cwd: installPath });
+                        await execFilePromise('docker', ['compose', 'exec', '-T', npmContainer, 'npm', 'audit', '--json'], { cwd: installPath, timeout: 120000 });
                     } catch (npmErr) {
                         if (npmErr.stdout) {
                             try {
@@ -166,6 +166,8 @@ class SCAService {
         const duration = Date.now() - startTime;
         return {
             target: `${instance.company} (${instance.rfc})`,
+            targetPath: instance.install_path,
+            command: toolsUsed.join(' & '),
             type: 'SCA',
             tool: toolsUsed.join(' + ') || 'SCA',
             config: 'Default Scan',

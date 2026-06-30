@@ -75,6 +75,10 @@ router.post('/api/execute/:type/:instanceId', (req, res) => {
                 
                 finalResult.reportId = reportId;
                 results.push(finalResult);
+
+                if (finalResult.status === 'Fallido') {
+                    break;
+                }
             }
 
             res.json({ success: true, data: type === 'ALL' ? results : results[0], reportId: results[0].reportId });

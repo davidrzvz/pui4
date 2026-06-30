@@ -16,10 +16,18 @@ class SASTService {
                 throw new Error(`La ruta del proyecto no existe: ${installPath}`);
             }
 
-            const { stdout } = await execFilePromise('docker', [
-                'run', '--rm', '-v', `${installPath}:/src`, 
-                'returntocorp/semgrep', 'semgrep', 'scan', '--json', '/src'
-            ], { maxBuffer: 10 * 1024 * 1024 });
+            const cmdArgs = [
+                'run', '--rm', '-v', `${installPath}:/src:ro`, 
+                'returntocorp/semgrep', 'semgrep', 'scan', 
+                '--config=p/php', '--json', '--metrics=off',
+                '--exclude', 'vendor',
+                '--exclude', 'node_modules',
+                '--exclude', 'storage',
+                '--exclude', 'bootstrap/cache',
+                '/src'
+            ];
+
+            const { stdout } = await execFilePromise('docker', cmdArgs, { maxBuffer: 10 * 1024 * 1024, timeout: 2 * 60 * 1000 });
 
             const result = JSON.parse(stdout);
             
@@ -34,20 +42,30 @@ class SASTService {
         } catch (error) {
             console.error('SAST Error:', error);
             status = 'Fallido';
+            
+            let errMsg = error.message;
+            if (error.stderr) {
+                errMsg += '\n' + error.stderr;
+            } else if (error.stdout) {
+                errMsg += '\n' + error.stdout;
+            }
+
             findings.push({
                 title: 'Error de Ejecución o Validación',
                 severity: 'High',
-                description: `No se pudo ejecutar SAST: ${error.message}`,
-                recommendation: 'Verificar la ruta del proyecto y conectividad Docker.'
+                description: `No se pudo ejecutar SAST:\n${errMsg}`,
+                recommendation: 'Verificar la herramienta y los logs para resolver el problema.'
             });
         }
         
         const duration = Date.now() - startTime;
         return {
             target: `${instance.company} (${instance.rfc})`,
+            targetPath: instance.install_path,
+            command: 'docker run --rm returntocorp/semgrep semgrep scan ...',
             type: 'SAST',
             tool: 'Semgrep (Docker)',
-            config: 'Default Ruleset',
+            config: 'p/php',
             status: status,
             date: new Date().toLocaleString(),
             duration: `${duration} ms`,

@@ -42,7 +42,7 @@ class DASTService {
                     '-v', `${tempDir}:/zap/wrk/:rw`,
                     'ghcr.io/zaproxy/zaproxy:stable',
                     'zap-baseline.py', '-t', targetUrl, '-J', 'report.json'
-                ]);
+                ], { timeout: 120000 });
             } catch (zapErr) {
                 // ZAP arroja error si encuentra vulnerabilidades o warnings. Continuamos.
             }
@@ -81,6 +81,8 @@ class DASTService {
         const duration = Date.now() - startTime;
         return {
             target: `${instance.company} (${instance.rfc})`,
+            targetPath: targetUrl,
+            command: 'docker run --rm ghcr.io/zaproxy/zaproxy:stable zap-baseline.py',
             type: 'DAST',
             tool: 'OWASP ZAP (Docker)',
             config: 'Baseline Scan',
