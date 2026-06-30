@@ -128,22 +128,22 @@ class ReportGenerator {
         
         try {
             // 1. Try ZIP
-            execSync('zip -r security-report.zip . -x "security-report.*"', { cwd: sourceDir, stdio: 'ignore' });
+            execSync('zip -r security-report.zip . -x "security-report.*"', { cwd: sourceDir, stdio: 'pipe' });
             if (fs.existsSync(zipPath) && fs.statSync(zipPath).size > 0) {
                 return zipPath;
             }
         } catch (e) {
-            console.log(`[Warning] zip command failed or not found in ${sourceDir}`);
+            console.log(`[Warning] zip command failed in ${sourceDir}:`, e.message || e.stderr?.toString());
         }
 
         try {
             // 2. Fallback to TAR
-            execSync('tar -czf security-report.tar.gz --exclude="security-report.*" .', { cwd: sourceDir, stdio: 'ignore' });
+            execSync('tar --exclude="security-report.*" -czf security-report.tar.gz .', { cwd: sourceDir, stdio: 'pipe' });
             if (fs.existsSync(tarPath) && fs.statSync(tarPath).size > 0) {
                 return tarPath;
             }
         } catch (e) {
-            console.log(`[Warning] tar command failed or not found in ${sourceDir}`);
+            console.log(`[Warning] tar command failed in ${sourceDir}:`, e.message || e.stderr?.toString());
         }
 
         // 3. Mark as missing if both fail
