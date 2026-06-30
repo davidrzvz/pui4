@@ -61,7 +61,8 @@ class ReportGenerator {
         metadata.herramientas_utilizadas = auditData.toolsUsed || [];
         metadata.versiones = auditData.toolVersions || {};
         metadata.duracion = auditData.durationMs ? `${auditData.durationMs} ms` : 'N/A';
-        metadata.resultado = auditData.status || 'Finished';
+        metadata.status = auditData.status || 'Finished';
+        if (metadata.resultado) delete metadata.resultado;
         
         fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
         filesToManifest.push('metadata.json');

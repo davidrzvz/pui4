@@ -9,11 +9,10 @@ class StorageManager {
         }
     }
 
-    createAuditDirectory(auditId) {
-        const date = new Date();
-        const year = date.getFullYear().toString();
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const day = date.getDate().toString().padStart(2, '0');
+    getOrCreateAuditDirectory(auditId, dateObj = new Date()) {
+        const year = dateObj.getFullYear().toString();
+        const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+        const day = dateObj.getDate().toString().padStart(2, '0');
         
         const auditDirName = `audit-${auditId.toString().padStart(6, '0')}`;
         const fullPath = path.join(this.baseDir, year, month, day, auditDirName);
@@ -29,7 +28,7 @@ class StorageManager {
             // Create initial metadata.json
             const metadata = {
                 audit_id: auditId,
-                date: date.toISOString(),
+                date: dateObj.toISOString(),
                 tools: [],
                 status: 'running'
             };

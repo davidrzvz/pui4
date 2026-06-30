@@ -49,9 +49,9 @@ class Worker {
             const audit = await this._getAuditDetails(job.audit_id);
             if (!audit) throw new Error("Audit record not found");
 
-            // Ensure audit directory is created early
+            // Ensure audit directory is created early using the original date
             const storageManager = new (require('../storage/StorageManager'))();
-            storageManager.createAuditDirectory(audit.id);
+            storageManager.getOrCreateAuditDirectory(audit.id, new Date(audit.date));
 
             // Execute the appropriate scanners via ScannerManager based on profile/type
             // For now, this is a skeleton simulation.
