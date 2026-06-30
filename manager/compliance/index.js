@@ -69,9 +69,9 @@ router.post('/api/auditorias/instance', async (req, res) => {
 router.get('/api/audits/history', (req, res) => {
     db.all(`
         SELECT sa.id, sa.status, sa.date, sa.profile, sa.vulnerabilities_count,
-               cj.progress, i.rfc as instance_name
+               (SELECT progress FROM compliance_jobs WHERE audit_id = sa.id ORDER BY id DESC LIMIT 1) as progress,
+               i.rfc as instance_name
         FROM security_audits sa
-        LEFT JOIN compliance_jobs cj ON sa.id = cj.audit_id
         LEFT JOIN instances i ON sa.target_id = i.id
         ORDER BY sa.date DESC
     `, [], (err, rows) => {
