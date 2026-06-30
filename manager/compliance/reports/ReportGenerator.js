@@ -138,8 +138,16 @@ class ReportGenerator {
 
         try {
             // 2. Fallback to TAR
-            execSync('tar --exclude="security-report.*" -czf security-report.tar.gz .', { cwd: sourceDir, stdio: 'pipe' });
-            if (fs.existsSync(tarPath) && fs.statSync(tarPath).size > 0) {
+            // Create tar in a temporary directory to avoid "file changed as we read it"
+            const os = require('os');
+            const tmpTarPath = path.join(os.tmpdir(), `security-report-${Date.now()}.tar.gz`);
+            
+            execSync(`tar --exclude="security-report.*" -czf ${tmpTarPath} -C ${sourceDir} .`, { stdio: 'pipe' });
+            
+            if (fs.existsSync(tmpTarPath) && fs.statSync(tmpTarPath).size > 0) {
+                // Move from tmp to target directory
+                fs.copyFileSync(tmpTarPath, tarPath);
+                fs.unlinkSync(tmpTarPath);
                 return tarPath;
             }
         } catch (e) {
