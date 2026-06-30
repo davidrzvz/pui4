@@ -64,6 +64,19 @@ const db = new sqlite3.Database(dbPath, (err) => {
             FOREIGN KEY(audit_id) REFERENCES security_audits(id)
         )`);
 
+        db.run(`CREATE TABLE IF NOT EXISTS security_reports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date DATETIME DEFAULT CURRENT_TIMESTAMP,
+            type TEXT NOT NULL,
+            tool TEXT NOT NULL,
+            duration TEXT,
+            status TEXT,
+            findings INTEGER DEFAULT 0,
+            json_path TEXT,
+            html_path TEXT,
+            pdf_path TEXT
+        )`);
+
         db.run(`CREATE TABLE IF NOT EXISTS settings (
             key TEXT PRIMARY KEY,
             value TEXT NOT NULL

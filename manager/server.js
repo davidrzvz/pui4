@@ -18,6 +18,10 @@ app.set('views', path.join(__dirname, 'views'));
 
 const complianceRoutes = require('./compliance/index');
 app.use('/compliance', complianceRoutes);
+
+const securityRoutes = require('./security/SecurityController');
+app.use('/security', securityRoutes);
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
