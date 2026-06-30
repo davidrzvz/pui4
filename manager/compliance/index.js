@@ -93,8 +93,45 @@ router.get('/api/audits/history', (req, res) => {
 router.post('/api/evidences/:id/regenerate', async (req, res) => {
     const auditId = req.params.id;
     try {
-        await jobDispatcher.dispatch({ auditId });
-        res.json({ success: true, message: "Regeneration queued." });
+        db.get(`SELECT * FROM security_audits WHERE id = ?`, [auditId], async (err, audit) => {
+            if (err || !audit) return res.status(404).json({ success: false, error: "Audit not found" });
+
+            const ReportGenerator = require('./reports/ReportGenerator');
+            const reportGen = new ReportGenerator(storageManager);
+            
+            const auditData = {
+                id: audit.id,
+                date: audit.date,
+                profile: audit.profile,
+                vulnerabilities_count: audit.vulnerabilities_count || 0,
+                status: audit.status || 'Finished',
+                toolsUsed: [],
+                toolVersions: {},
+                durationMs: 0
+            };
+            
+            const auditDir = storageManager.getAuditDirectory(audit.id, new Date(audit.date));
+            const metadataPath = require('path').join(auditDir, 'metadata.json');
+            const fs = require('fs');
+            if (fs.existsSync(metadataPath)) {
+                try {
+                    const existingMeta = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+                    if (existingMeta.herramientas_utilizadas) {
+                        auditData.toolsUsed = existingMeta.herramientas_utilizadas;
+                    }
+                    if (existingMeta.status) {
+                        auditData.status = existingMeta.status;
+                    }
+                } catch(e) {}
+            }
+
+            try {
+                await reportGen.generateReports(audit.id, auditData, new Date(audit.date));
+                res.json({ success: true, message: "Evidencia regenerada exitosamente." });
+            } catch (genErr) {
+                res.status(500).json({ success: false, error: "Error regenerando evidencia: " + genErr.message });
+            }
+        });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
