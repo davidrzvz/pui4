@@ -12,87 +12,98 @@ class ReportGenerator {
 
     async generateReports(auditId, auditData, dateObj) {
         const auditDir = this.storageManager.getAuditDirectory(auditId, dateObj);
-        
-        // Render HTML from strings directly without writing to /views
-        const execHtml = ejs.render(this._getBasicTemplate('Executive Report'), { audit: auditData });
-        const techHtml = ejs.render(this._getBasicTemplate('Technical Report'), { audit: auditData });
-
-        // Write HTML files
-        const execHtmlPath = path.join(auditDir, 'executive-report.html');
-        const techHtmlPath = path.join(auditDir, 'technical-report.html');
-        fs.writeFileSync(execHtmlPath, execHtml);
-        fs.writeFileSync(techHtmlPath, techHtml);
-
-        const filesToManifest = [
-            'executive-report.html',
-            'technical-report.html'
-        ];
-
-        // Generate PDFs if Playwright is available
-        const execPdfPath = path.join(auditDir, 'executive-report.pdf');
-        const techPdfPath = path.join(auditDir, 'technical-report.pdf');
+        const zipPath = path.join(auditDir, 'security-report.zip');
         
         try {
-            if (ToolRegistry.isToolAvailable('playwright')) {
-                const { chromium } = require('playwright');
-                await this._htmlToPdf(chromium, execHtml, execPdfPath);
-                await this._htmlToPdf(chromium, techHtml, techPdfPath);
-                filesToManifest.push('executive-report.pdf', 'technical-report.pdf');
-            } else {
-                console.log(`[Warning] Playwright not available, skipping PDF generation for Audit ${auditId}.`);
+            // Render HTML from strings directly without writing to /views
+            const execHtml = ejs.render(this._getBasicTemplate('Executive Report'), { audit: auditData });
+            const techHtml = ejs.render(this._getBasicTemplate('Technical Report'), { audit: auditData });
+
+            // Write HTML files
+            const execHtmlPath = path.join(auditDir, 'executive-report.html');
+            const techHtmlPath = path.join(auditDir, 'technical-report.html');
+            fs.writeFileSync(execHtmlPath, execHtml);
+            fs.writeFileSync(techHtmlPath, techHtml);
+
+            const filesToManifest = [
+                'executive-report.html',
+                'technical-report.html'
+            ];
+
+            // Generate PDFs if Playwright is available
+            const execPdfPath = path.join(auditDir, 'executive-report.pdf');
+            const techPdfPath = path.join(auditDir, 'technical-report.pdf');
+            
+            try {
+                if (ToolRegistry.isToolAvailable('playwright')) {
+                    const { chromium } = require('playwright');
+                    await this._htmlToPdf(chromium, execHtml, execPdfPath);
+                    await this._htmlToPdf(chromium, techHtml, techPdfPath);
+                    filesToManifest.push('executive-report.pdf', 'technical-report.pdf');
+                } else {
+                    console.log(`[Warning] Playwright not available, skipping PDF generation for Audit ${auditId}.`);
+                    fs.writeFileSync(path.join(auditDir, 'logs', 'tool-missing.log'), "Auditoría incompleta por herramienta faltante: Playwright/Chromium no instalado.\n", { flag: 'a' });
+                }
+            } catch (e) {
+                console.log(`[Warning] Error launching Playwright, skipping PDF for Audit ${auditId}:`, e.message);
                 fs.writeFileSync(path.join(auditDir, 'logs', 'tool-missing.log'), "Auditoría incompleta por herramienta faltante: Playwright/Chromium no instalado.\n", { flag: 'a' });
             }
-        } catch (e) {
-            console.log(`[Warning] Error launching Playwright, skipping PDF for Audit ${auditId}:`, e.message);
-            fs.writeFileSync(path.join(auditDir, 'logs', 'tool-missing.log'), "Auditoría incompleta por herramienta faltante: Playwright/Chromium no instalado.\n", { flag: 'a' });
-        }
 
-        // Update Metadata
-        const metadataPath = path.join(auditDir, 'metadata.json');
-        let metadata = { tools: [] };
-        if (fs.existsSync(metadataPath)) {
-            metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
-        }
-        
-        metadata.audit_id = auditId;
-        metadata.fecha = dateObj.toISOString();
-        metadata.instancia = auditData.instance_name || 'N/A';
-        metadata.profile = auditData.profile || 'Unknown';
-        metadata.herramientas_utilizadas = auditData.toolsUsed || [];
-        metadata.versiones = auditData.toolVersions || {};
-        metadata.duracion = auditData.durationMs ? `${auditData.durationMs} ms` : 'N/A';
-        metadata.status = auditData.status || 'Finished';
-        if (metadata.resultado) delete metadata.resultado;
-        
-        fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
-        filesToManifest.push('metadata.json');
-        
-        if (fs.existsSync(path.join(auditDir, 'logs', 'tool-missing.log'))) {
-            filesToManifest.push('logs/tool-missing.log');
-        }
-
-        // Generate Manifest with SHA256
-        const manifest = {
-            version: '1.0',
-            audit_id: auditId,
-            generated_at: new Date().toISOString(),
-            files: {}
-        };
-        
-        for (const file of filesToManifest) {
-            const filePath = path.join(auditDir, file);
-            if (fs.existsSync(filePath)) {
-                manifest.files[file] = this._calculateSha256(filePath);
+            // Update Metadata
+            const metadataPath = path.join(auditDir, 'metadata.json');
+            let metadata = { tools: [] };
+            if (fs.existsSync(metadataPath)) {
+                metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
             }
-        }
-        
-        fs.writeFileSync(path.join(auditDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
-        
-        // Final Zip (do not hash the zip inside the manifest, just add it to folder)
-        const zipPath = path.join(auditDir, 'security-report.zip');
-        await this._createZip(auditDir, zipPath);
+            
+            metadata.audit_id = auditId;
+            metadata.fecha = dateObj.toISOString();
+            metadata.instancia = auditData.instance_name || 'N/A';
+            metadata.profile = auditData.profile || 'Unknown';
+            metadata.herramientas_utilizadas = auditData.toolsUsed || [];
+            metadata.versiones = auditData.toolVersions || {};
+            metadata.duracion = auditData.durationMs ? `${auditData.durationMs} ms` : 'N/A';
+            metadata.status = auditData.status || 'Finished';
+            if (metadata.resultado) delete metadata.resultado;
+            
+            fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+            filesToManifest.push('metadata.json');
+            
+            if (fs.existsSync(path.join(auditDir, 'logs', 'tool-missing.log'))) {
+                filesToManifest.push('logs/tool-missing.log');
+            }
 
-        return zipPath;
+            // Generate Manifest with SHA256
+            const manifest = {
+                version: '1.0',
+                audit_id: auditId,
+                generated_at: new Date().toISOString(),
+                files: {}
+            };
+            
+            for (const file of filesToManifest) {
+                const filePath = path.join(auditDir, file);
+                if (fs.existsSync(filePath)) {
+                    manifest.files[file] = this._calculateSha256(filePath);
+                }
+            }
+            
+            fs.writeFileSync(path.join(auditDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
+            
+            // Final Zip (do not hash the zip inside the manifest, just add it to folder)
+            await this._createZip(auditDir, zipPath);
+            
+            const stats = fs.statSync(zipPath);
+            if (stats.size === 0) throw new Error("ZIP file generated is empty");
+
+            return zipPath;
+        } catch (error) {
+            console.error(`[Error] Failed to generate complete reports for Audit ${auditId}:`, error);
+            if (fs.existsSync(zipPath)) {
+                fs.unlinkSync(zipPath); // Cleanup corrupted/empty ZIP
+            }
+            throw error; // Propagate to mark evidence as incomplete
+        }
     }
 
     _calculateSha256(filePath) {

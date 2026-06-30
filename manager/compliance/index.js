@@ -113,11 +113,14 @@ router.get('/api/evidences/:id/zip', (req, res) => {
         if (err || !row) return res.status(404).json({ success: false, error: "Evidence not generated" });
         const auditDir = storageManager.getAuditDirectory(auditId, new Date(row.date));
         const filePath = require('path').join(auditDir, 'security-report.zip');
-        if (require('fs').existsSync(filePath)) {
-            res.download(filePath, `audit-${auditId}-security-report.zip`);
-        } else {
-            res.status(404).json({ success: false, error: "Evidence not generated" });
+        const fs = require('fs');
+        if (fs.existsSync(filePath)) {
+            const stats = fs.statSync(filePath);
+            if (stats.size > 0) {
+                return res.download(filePath, `audit-${auditId}-security-report.zip`);
+            }
         }
+        res.status(404).json({ success: false, error: "Evidence not generated or incomplete" });
     });
 });
 
