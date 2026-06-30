@@ -33,8 +33,15 @@ router.post('/api/execute/:type/:instanceId', (req, res) => {
     else if (type === 'DAST') service = dastService;
     else if (type !== 'ALL') return res.status(400).json({ success: false, error: 'Invalid type' });
 
+    console.log(`[SecurityController] Petición recibida. Type: ${type}, InstanceID: ${instanceId}`);
+
     db.get('SELECT * FROM instances WHERE id = ?', [instanceId], async (err, instance) => {
-        if (err || !instance) return res.status(404).json({ success: false, error: 'Instancia no encontrada' });
+        if (err || !instance) {
+            console.log(`[SecurityController] Instancia no resuelta para ID: ${instanceId}`);
+            return res.status(404).json({ success: false, error: 'Instancia no encontrada' });
+        }
+        
+        console.log(`[SecurityController] Instancia resuelta: ${instance.rfc} en ${instance.install_path}`);
 
         try {
             let typesToRun = type === 'ALL' ? ['SAST', 'SCA', 'DAST'] : [type];
@@ -46,8 +53,10 @@ router.post('/api/execute/:type/:instanceId', (req, res) => {
                 if (t === 'SCA') currentService = scaService;
                 if (t === 'DAST') currentService = dastService;
 
+                console.log(`[SecurityController] Inicio de ejecución: ${t}`);
                 // 1. Ejecutar la herramienta (síncrono, con await)
                 const rawResult = await currentService.execute(instance);
+                console.log(`[SecurityController] Fin de ejecución: ${t}. Generando reportes...`);
 
                 // 2. Generar reportes PDF y HTML
                 const finalResult = await reportGenerator.generate(t, rawResult);
@@ -75,12 +84,16 @@ router.post('/api/execute/:type/:instanceId', (req, res) => {
                 
                 finalResult.reportId = reportId;
                 results.push(finalResult);
+                
+                console.log(`[SecurityController] Reporte guardado en DB con ID: ${reportId}`);
 
                 if (finalResult.status === 'Fallido') {
+                    console.log(`[SecurityController] Abortando suite por fallo en ${t}`);
                     break;
                 }
             }
 
+            console.log(`[SecurityController] Respuesta enviada correctamente.`);
             res.json({ success: true, data: type === 'ALL' ? results : results[0], reportId: results[0].reportId });
         } catch (execErr) {
             console.error(`[Error] Failed executing ${type}:`, execErr);
