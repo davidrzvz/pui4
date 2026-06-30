@@ -31,45 +31,61 @@ router.post('/api/execute/:type/:instanceId', (req, res) => {
     if (type === 'SAST') service = sastService;
     else if (type === 'SCA') service = scaService;
     else if (type === 'DAST') service = dastService;
-    else return res.status(400).json({ success: false, error: 'Invalid type' });
+    else if (type !== 'ALL') return res.status(400).json({ success: false, error: 'Invalid type' });
 
     db.get('SELECT * FROM instances WHERE id = ?', [instanceId], async (err, instance) => {
         if (err || !instance) return res.status(404).json({ success: false, error: 'Instancia no encontrada' });
 
         try {
-            // 1. Ejecutar la herramienta (síncrono, con await)
-            const rawResult = await service.execute(instance);
+            let typesToRun = type === 'ALL' ? ['SAST', 'SCA', 'DAST'] : [type];
+            let results = [];
+            
+            for (let t of typesToRun) {
+                let currentService;
+                if (t === 'SAST') currentService = sastService;
+                if (t === 'SCA') currentService = scaService;
+                if (t === 'DAST') currentService = dastService;
 
-            // 2. Generar reportes PDF y HTML
-            const finalResult = await reportGenerator.generate(type, rawResult);
+                // 1. Ejecutar la herramienta (síncrono, con await)
+                const rawResult = await currentService.execute(instance);
 
-            // 3. Guardar en base de datos (Historial)
-            db.run(`INSERT INTO security_reports (type, tool, duration, status, findings, json_path, html_path, pdf_path) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, 
-                [
-                    finalResult.type,
-                    finalResult.tool,
-                    finalResult.duration,
-                    finalResult.status,
-                    finalResult.findings.length,
-                    finalResult.json_path,
-                    finalResult.html_path,
-                    finalResult.pdf_path
-                ],
-                function(dbErr) {
-                    if (dbErr) {
-                        console.error("Error saving security report to DB:", dbErr.message);
-                        return res.status(500).json({ success: false, error: dbErr.message });
-                    }
-                    res.json({ success: true, data: finalResult, reportId: this.lastID });
-                }
-            );
+                // 2. Generar reportes PDF y HTML
+                const finalResult = await reportGenerator.generate(t, rawResult);
+
+                // 3. Guardar en base de datos (Historial)
+                const reportId = await new Promise((resolve, reject) => {
+                    db.run(`INSERT INTO security_reports (type, tool, duration, status, findings, json_path, html_path, pdf_path) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, 
+                        [
+                            finalResult.type,
+                            finalResult.tool,
+                            finalResult.duration,
+                            finalResult.status,
+                            finalResult.findings.length,
+                            finalResult.json_path,
+                            finalResult.html_path,
+                            finalResult.pdf_path
+                        ],
+                        function(dbErr) {
+                            if (dbErr) reject(dbErr);
+                            else resolve(this.lastID);
+                        }
+                    );
+                });
+                
+                finalResult.reportId = reportId;
+                results.push(finalResult);
+            }
+
+            res.json({ success: true, data: type === 'ALL' ? results : results[0], reportId: results[0].reportId });
         } catch (execErr) {
             console.error(`[Error] Failed executing ${type}:`, execErr);
             res.status(500).json({ success: false, error: execErr.message });
         }
     });
 });
+
+
 
 router.get('/api/history', (req, res) => {
     db.all(`SELECT * FROM security_reports ORDER BY date DESC`, [], (err, rows) => {
