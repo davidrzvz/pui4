@@ -45,7 +45,15 @@ def run_sast(code_path):
         "docker", "run", "--rm", 
         "-v", f"{code_path}:/src:ro", 
         "-v", "/app/security-rules:/app/security-rules:ro",
-        "returntocorp/semgrep", "semgrep", "scan", "--config=/app/security-rules", "--json", "--metrics=off",
+        "returntocorp/semgrep", "semgrep", "scan", 
+        "--config=/app/security-rules/php",
+        "--config=/app/security-rules/javascript",
+        "--config=/app/security-rules/typescript",
+        "--config=/app/security-rules/dockerfile",
+        "--config=/app/security-rules/yaml",
+        "--config=/app/security-rules/json",
+        "--config=/app/security-rules/generic",
+        "--json", "--metrics=off",
         "--exclude", "vendor", "--exclude", "node_modules", "--exclude", "storage", "--exclude", "bootstrap/cache",
         "/src"
     ]
@@ -339,8 +347,8 @@ def build_html_report(name, url, code_path, report_data):
         <tr><th>Duración</th><td>Automática</td></tr>
         <tr><th>Herramienta</th><td>{html.escape(report_data.get('tool', 'N/A'))}</td></tr>
         <tr><th>Fuente de reglas</th><td>Semgrep Community Rules almacenadas localmente.</td></tr>
-        <tr><th>Paquete utilizado</th><td>/app/security-rules</td></tr>
-        <tr><th>URL / Fuente</th><td>https://github.com/semgrep/semgrep-rules</td></tr>
+        <tr><th>Paquetes utilizados</th><td>php, javascript, typescript, dockerfile, yaml, json, generic</td></tr>
+        <tr><th>Ruta base</th><td>/app/security-rules</td></tr>
         <tr><th>Comando ejecutado</th><td><code>{html.escape(report_data.get('command', 'N/A'))}</code></td></tr>
     </table>
 
