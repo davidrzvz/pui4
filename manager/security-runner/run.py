@@ -262,6 +262,113 @@ def build_html_report(name, url, code_path, report_data):
     date_str = get_current_time()
     type_name = report_data["type"]
     
+    if type_name == "SAST":
+        findings_html_sast = ""
+        if not report_data["findings"]:
+            findings_html_sast = "<p>No se reportaron hallazgos.</p>"
+        else:
+            for idx, f in enumerate(report_data["findings"]):
+                desc = html.escape(f.get('description', '')).replace('\\n', '<br>').replace('\n', '<br>')
+                findings_html_sast += f"""
+                <div class="finding avoid-break">
+                    <h3>Hallazgo #{idx+1}: {html.escape(f.get('title', ''))}</h3>
+                    <p><strong>Severidad:</strong> <span class="severity-{f.get('severity', '').lower()}">{f.get('severity', '')}</span></p>
+                    <p><strong>Descripción:</strong> <pre style="white-space: pre-wrap; font-family: inherit;">{desc}</pre></p>
+                    <p><strong>Recomendación:</strong> {html.escape(f.get('recommendation', ''))}</p>
+                </div>
+                """
+        
+        return f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte de Evidencia de Seguridad - SAST</title>
+    <style>
+        body {{ font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px; color: #333; line-height: 1.6; }}
+        h1 {{ color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; margin-bottom: 10px; }}
+        .subtitle {{ font-size: 1.5em; color: #7f8c8d; margin-bottom: 30px; font-weight: bold; }}
+        h2 {{ color: #2980b9; margin-top: 40px; border-bottom: 1px solid #bdc3c7; padding-bottom: 5px; }}
+        table {{ width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 20px; }}
+        th, td {{ border: 1px solid #ddd; padding: 12px; text-align: left; }}
+        th {{ background-color: #ecf0f1; color: #2c3e50; width: 30%; }}
+        .finding {{ background: #f9f9f9; padding: 20px; border-left: 5px solid #e74c3c; margin-bottom: 20px; page-break-inside: avoid; }}
+        .finding h3 {{ margin-top: 0; color: #e74c3c; border-bottom: 1px solid #eee; padding-bottom: 10px; }}
+        .severity-high {{ color: #c0392b; font-weight: bold; }}
+        .severity-medium {{ color: #d35400; font-weight: bold; }}
+        .severity-low {{ color: #f39c12; font-weight: bold; }}
+        .print-btn {{
+            display: inline-block; background-color: #3498db; color: #fff; padding: 10px 20px;
+            text-decoration: none; border-radius: 5px; font-weight: bold; margin-bottom: 20px;
+            cursor: pointer; border: none; font-size: 16px;
+        }}
+        .print-btn:hover {{ background-color: #2980b9; }}
+        .footer {{ margin-top: 50px; font-size: 0.9em; color: #7f8c8d; border-top: 1px solid #ddd; padding-top: 20px; text-align: center; }}
+        @media print {{
+            body {{ padding: 0; background-color: #fff; color: #000; margin: 20px; }}
+            .print-btn {{ display: none; }}
+            .finding {{ border-left: 2px solid #000; background: #fff; border: 1px solid #ccc; }}
+            h1, h2, th, td, p, span, .subtitle, .footer {{ color: #000 !important; }}
+            table, th, td {{ border-color: #000; }}
+            .avoid-break {{ page-break-inside: avoid; }}
+        }}
+    </style>
+</head>
+<body>
+    <button class="print-btn" onclick="window.print()">🖨 Imprimir / Guardar como PDF</button>
+
+    <h1>REPORTE DE EVIDENCIA DE SEGURIDAD</h1>
+    <div class="subtitle">Análisis Estático de Código Fuente (SAST)</div>
+    
+    <table class="avoid-break">
+        <tr><th>Plataforma</th><td>Plataforma Única de Identificación (PUI)</td></tr>
+        <tr><th>Módulo</th><td>Compliance Center</td></tr>
+        <tr><th>Cliente (RFC)</th><td>{html.escape(name)}</td></tr>
+        <tr><th>Fecha / Hora</th><td>{date_str}</td></tr>
+        <tr><th>Herramienta</th><td>{html.escape(report_data.get('tool', 'N/A'))}</td></tr>
+        <tr><th>Tipo de análisis</th><td>SAST</td></tr>
+        <tr><th>Estado de ejecución</th><td><strong>COMPLETADO</strong></td></tr>
+    </table>
+
+    <h2>1. Objetivo</h2>
+    <p>El presente documento constituye la evidencia documental del análisis estático de seguridad (SAST) ejecutado sobre el código fuente de la aplicación evaluada, con el propósito de identificar posibles vulnerabilidades antes de la fase de ejecución.</p>
+
+    <h2>2. Alcance</h2>
+    <table class="avoid-break">
+        <tr><th>Ruta analizada</th><td>{html.escape(code_path)}</td></tr>
+        <tr><th>Tecnología detectada</th><td>PHP / JavaScript (Inferida)</td></tr>
+        <tr><th>Directorios excluidos</th><td>vendor, node_modules, storage, bootstrap/cache</td></tr>
+    </table>
+
+    <h2>3. Información del Análisis</h2>
+    <table class="avoid-break">
+        <tr><th>Fecha inicio</th><td>{date_str}</td></tr>
+        <tr><th>Fecha fin</th><td>{date_str}</td></tr>
+        <tr><th>Duración</th><td>Automática</td></tr>
+        <tr><th>Herramienta</th><td>{html.escape(report_data.get('tool', 'N/A'))}</td></tr>
+        <tr><th>Comando ejecutado</th><td><code>{html.escape(report_data.get('command', 'N/A'))}</code></td></tr>
+    </table>
+
+    <h2>4. Metodología</h2>
+    <p>El análisis fue ejecutado utilizando Semgrep en modo local. No se descargaron reglas remotas. El proceso fue ejecutado automáticamente por el Compliance Center.</p>
+
+    <h2>5. Resultado Ejecutivo</h2>
+    <p>Estado del análisis: <strong>COMPLETADO</strong></p>
+    <p>Resultado: No fue posible ejecutar reglas SAST debido a la ausencia de reglas locales.</p>
+
+    <h2>6. Hallazgos</h2>
+    {findings_html_sast}
+
+    <h2>Conclusión</h2>
+    <p>El proceso SAST fue ejecutado correctamente. No fue posible evaluar vulnerabilidades mediante reglas de Semgrep debido a que el proyecto no contiene una configuración local (.semgrep.yml).</p>
+
+    <div class="footer avoid-break">
+        <p>Documento generado automáticamente por: <strong>PUI Compliance Center</strong></p>
+        <p>No modificar manualmente. Este documento forma parte de la evidencia técnica del análisis de seguridad.</p>
+    </div>
+</body>
+</html>
+"""
+
     findings_html = ""
     if not report_data["findings"]:
         findings_html = """
