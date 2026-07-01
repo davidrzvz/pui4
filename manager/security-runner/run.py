@@ -212,7 +212,7 @@ def run_sca(code_path):
     }
 
 def run_dast(url):
-    print(">> Iniciando DAST...")
+    print(">> Iniciando DAST")
     findings = []
     
     if not url:
@@ -229,7 +229,9 @@ def run_dast(url):
         "ghcr.io/zaproxy/zaproxy:stable", "zap-baseline.py", "-t", url, "-J", "report.json"
     ]
     
+    print(">> Ejecutando comando...")
     res = run_cmd(cmd, timeout=120)
+    print(">> Resultado recibido")
     
     status = "Completado"
     if res["code"] not in [0, 1, 2]:
@@ -483,7 +485,10 @@ def main():
     if args.type in ["DAST", "ALL"]:
         dast_res = run_dast(args.url)
         dast_html = build_html_report(args.name, args.url, args.code, dast_res)
+        print(">> Escribiendo DAST.json")
+        print(">> Escribiendo DAST.html")
         save_data(out_dir, "DAST", dast_html, dast_res)
+        print(">> DAST finalizado")
     
     # Resumen (se genera en todos los casos para mantener la trazabilidad de lo ejecutado vs omitido)
     print(">> Generando Resumen...")
