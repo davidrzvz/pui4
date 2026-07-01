@@ -394,13 +394,17 @@ def save_and_pdf(out_dir, base_name, html_content, json_data):
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(json_data, f, indent=2, ensure_ascii=False)
             
-    # Intentar wkhtmltopdf
     print(f"Generando PDF para {base_name}...")
-    pdf_res = run_cmd(["wkhtmltopdf", html_path, pdf_path], timeout=30)
-    if not pdf_res["success"]:
-        print(f"  [!] Falló wkhtmltopdf: {pdf_res['stderr'].strip()}")
-    else:
+    try:
+        from weasyprint import HTML
+        HTML(string=html_content).write_pdf(pdf_path)
         print(f"  PDF generado: {pdf_path}")
+    except ImportError:
+        print(f"  [!] WeasyPrint no está instalado. El PDF no se generó.")
+        print(f"  [!] Ejecuta 'pip install -r requirements.txt' para habilitar la generación de PDF.")
+        print(f"  [!] El HTML sigue disponible en: {html_path}")
+    except Exception as e:
+        print(f"  [!] Error al generar PDF con WeasyPrint: {e}")
 
 def main():
     parser = argparse.ArgumentParser(description="Security Runner Standalone")
