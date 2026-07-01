@@ -43,20 +43,35 @@ def run_sast(code_path):
     
     host_rules_path = os.path.join(os.getcwd(), 'security-rules')
     
+    # Diagnóstico solicitado
+    print("os.getcwd():", os.getcwd())
+    print("host_rules_path:", host_rules_path)
+    exists = os.path.exists(host_rules_path)
+    print("os.path.exists(host_rules_path):", exists)
+    if exists:
+        try:
+            print("os.listdir(host_rules_path):", os.listdir(host_rules_path))
+        except Exception as e:
+            print("Error listando directorio:", e)
+    else:
+        print("El directorio de reglas no existe en el host.")
+
     cmd = [
         "docker", "run", "--rm", 
+        "--entrypoint", "sh",
         "-v", f"{code_path}:/src:ro", 
         "-v", f"{host_rules_path}:/rules:ro",
-        "returntocorp/semgrep", "semgrep", "scan", 
-        "--config=/rules/php",
-        "--config=/rules/javascript",
-        "--config=/rules/typescript",
-        "--config=/rules/dockerfile",
-        "--config=/rules/yaml",
-        "--config=/rules/json",
-        "--config=/rules/generic",
-        "--json", "--metrics=off",
-        "--exclude", "vendor", "--exclude", "node_modules", "--exclude", "storage", "--exclude", "bootstrap/cache",
+        "returntocorp/semgrep", "-c",
+        "ls -R /rules && semgrep scan "
+        "--config=/rules/php "
+        "--config=/rules/javascript "
+        "--config=/rules/typescript "
+        "--config=/rules/dockerfile "
+        "--config=/rules/yaml "
+        "--config=/rules/json "
+        "--config=/rules/generic "
+        "--json --metrics=off "
+        "--exclude vendor --exclude node_modules --exclude storage --exclude bootstrap/cache "
         "/src"
     ]
     
