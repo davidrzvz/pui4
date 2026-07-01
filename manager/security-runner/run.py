@@ -56,9 +56,9 @@ def run_sast(code_path):
     if res["code"] not in [0, 1]:
         status = "Fallido"
         err_msg = res['stderr'] or res['stdout']
-        if "Network error" in err_msg or "Failed to fetch" in err_msg or "certificate verify failed" in err_msg or "Could not fetch" in err_msg or "error downloading" in err_msg.lower():
-             title = "Error de Conexión a semgrep.dev"
-             desc = f"No fue posible descargar el paquete de reglas p/security-audit desde el registro remoto.\nDetalle: {err_msg[:500]}"
+        if "Network error" in err_msg or "Failed to fetch" in err_msg or "certificate verify failed" in err_msg or "Could not fetch" in err_msg or "error downloading" in err_msg.lower() or "No such file or directory" in err_msg:
+             title = "Error de Carga de Reglas"
+             desc = f"No fue posible cargar el repositorio local de reglas Semgrep ubicado en /app/security-rules.\nDetalle: {err_msg[:500]}"
         else:
              title = "Error de Herramienta"
              desc = f"Semgrep falló:\n{err_msg[:500]}"
@@ -67,7 +67,7 @@ def run_sast(code_path):
             "title": title,
             "severity": "High",
             "description": desc,
-            "recommendation": "Verificar conectividad a internet para descarga de reglas o revisar sintaxis."
+            "recommendation": "Verificar que el volumen /app/security-rules exista y tenga permisos de lectura o revisar sintaxis."
         })
     else:
         try:
@@ -338,7 +338,7 @@ def build_html_report(name, url, code_path, report_data):
         <tr><th>Fecha fin</th><td>{date_str}</td></tr>
         <tr><th>Duración</th><td>Automática</td></tr>
         <tr><th>Herramienta</th><td>{html.escape(report_data.get('tool', 'N/A'))}</td></tr>
-        <tr><th>Fuente de reglas</th><td>Repositorio Local Semgrep Community Rules</td></tr>
+        <tr><th>Fuente de reglas</th><td>Semgrep Community Rules almacenadas localmente.</td></tr>
         <tr><th>Paquete utilizado</th><td>/app/security-rules</td></tr>
         <tr><th>URL / Fuente</th><td>https://github.com/semgrep/semgrep-rules</td></tr>
         <tr><th>Comando ejecutado</th><td><code>{html.escape(report_data.get('command', 'N/A'))}</code></td></tr>
