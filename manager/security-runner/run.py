@@ -42,8 +42,10 @@ def run_sast(code_path):
     findings = []
     
     cmd = [
-        "docker", "run", "--rm", "-v", f"{code_path}:/src:ro",
-        "returntocorp/semgrep", "semgrep", "scan", "--config=p/security-audit", "--json", "--metrics=off",
+        "docker", "run", "--rm", 
+        "-v", f"{code_path}:/src:ro", 
+        "-v", "/app/security-rules:/app/security-rules:ro",
+        "returntocorp/semgrep", "semgrep", "scan", "--config=/app/security-rules", "--json", "--metrics=off",
         "--exclude", "vendor", "--exclude", "node_modules", "--exclude", "storage", "--exclude", "bootstrap/cache",
         "/src"
     ]
@@ -336,15 +338,14 @@ def build_html_report(name, url, code_path, report_data):
         <tr><th>Fecha fin</th><td>{date_str}</td></tr>
         <tr><th>Duración</th><td>Automática</td></tr>
         <tr><th>Herramienta</th><td>{html.escape(report_data.get('tool', 'N/A'))}</td></tr>
-        <tr><th>Fuente de reglas</th><td>Semgrep Registry</td></tr>
-        <tr><th>Paquete usado</th><td>p/security-audit</td></tr>
-        <tr><th>URL / Fuente</th><td>semgrep.dev</td></tr>
+        <tr><th>Fuente de reglas</th><td>Repositorio Local Semgrep Community Rules</td></tr>
+        <tr><th>Paquete utilizado</th><td>/app/security-rules</td></tr>
+        <tr><th>URL / Fuente</th><td>https://github.com/semgrep/semgrep-rules</td></tr>
         <tr><th>Comando ejecutado</th><td><code>{html.escape(report_data.get('command', 'N/A'))}</code></td></tr>
     </table>
-    <p style="font-size: 0.9em; color: #555; margin-top: -10px; margin-bottom: 30px;"><strong>Nota:</strong> El código fuente se analiza localmente; la conexión externa se usa únicamente para obtener reglas públicas de análisis.</p>
 
     <h2>4. Metodología</h2>
-    <p>El análisis fue ejecutado utilizando Semgrep con reglas públicas del Semgrep Registry. El código fuente fue analizado localmente; la conexión externa se utilizó únicamente para obtener la definición de reglas.</p>
+    <p>El análisis SAST fue ejecutado utilizando el repositorio oficial de reglas Community de Semgrep almacenado localmente dentro del Compliance Center, garantizando reproducibilidad, independencia de Internet y trazabilidad para procesos de auditoría.</p>
 
     <h2>5. Resultado Ejecutivo</h2>
     <p>Estado del análisis: <strong>COMPLETADO</strong></p>
