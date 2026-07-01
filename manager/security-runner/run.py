@@ -41,18 +41,20 @@ def run_sast(code_path):
     print(">> Iniciando SAST...")
     findings = []
     
+    host_rules_path = os.path.join(os.getcwd(), 'security-rules')
+    
     cmd = [
         "docker", "run", "--rm", 
         "-v", f"{code_path}:/src:ro", 
-        "-v", "/app/security-rules:/app/security-rules:ro",
+        "-v", f"{host_rules_path}:/rules:ro",
         "returntocorp/semgrep", "semgrep", "scan", 
-        "--config=/app/security-rules/php",
-        "--config=/app/security-rules/javascript",
-        "--config=/app/security-rules/typescript",
-        "--config=/app/security-rules/dockerfile",
-        "--config=/app/security-rules/yaml",
-        "--config=/app/security-rules/json",
-        "--config=/app/security-rules/generic",
+        "--config=/rules/php",
+        "--config=/rules/javascript",
+        "--config=/rules/typescript",
+        "--config=/rules/dockerfile",
+        "--config=/rules/yaml",
+        "--config=/rules/json",
+        "--config=/rules/generic",
         "--json", "--metrics=off",
         "--exclude", "vendor", "--exclude", "node_modules", "--exclude", "storage", "--exclude", "bootstrap/cache",
         "/src"
@@ -66,7 +68,7 @@ def run_sast(code_path):
         err_msg = res['stderr'] or res['stdout']
         if "Network error" in err_msg or "Failed to fetch" in err_msg or "certificate verify failed" in err_msg or "Could not fetch" in err_msg or "error downloading" in err_msg.lower() or "No such file or directory" in err_msg:
              title = "Error de Carga de Reglas"
-             desc = f"No fue posible cargar el repositorio local de reglas Semgrep ubicado en /app/security-rules.\nDetalle: {err_msg[:500]}"
+             desc = f"No fue posible cargar el repositorio local de reglas Semgrep.\nDetalle: {err_msg[:500]}"
         else:
              title = "Error de Herramienta"
              desc = f"Semgrep falló:\n{err_msg[:500]}"
@@ -75,7 +77,7 @@ def run_sast(code_path):
             "title": title,
             "severity": "High",
             "description": desc,
-            "recommendation": "Verificar que el volumen /app/security-rules exista y tenga permisos de lectura o revisar sintaxis."
+            "recommendation": f"Verificar que la carpeta {host_rules_path} exista en el host y tenga permisos de lectura."
         })
     else:
         try:
