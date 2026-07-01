@@ -44,7 +44,7 @@ router.post('/api/execute/:type/:instanceId', (req, res) => {
                 });
             });
             const targetUrl = `http://${serverIp}:${instance.port}`;
-            const outDir = path.join(process.cwd(), 'evidencias');
+            const outDir = '/app/data/evidencias';
             const runnerPath = path.join(process.cwd(), 'security-runner', 'run.py');
             
             const cmd = `python3 "${runnerPath}" --name "${instance.rfc}" --code "${instance.install_path}" --url "${targetUrl}" --output "${outDir}" --type "${type}"`;
