@@ -270,7 +270,7 @@ def build_html_report(name, url, code_path, report_data):
         for idx, f in enumerate(report_data["findings"]):
             desc = html.escape(f['description']).replace('\\n', '<br>').replace('\n', '<br>')
             findings_html += f"""
-            <div class="finding">
+            <div class="finding avoid-break">
                 <h3>Hallazgo #{idx+1}: {html.escape(f['title'])}</h3>
                 <p><strong>Severidad:</strong> <span class="severity-{f['severity'].lower()}">{f['severity']}</span></p>
                 <p><strong>Descripción / Detalles:</strong> <pre style="white-space: pre-wrap; font-family: inherit;">{desc}</pre></p>
@@ -282,7 +282,7 @@ def build_html_report(name, url, code_path, report_data):
     if type_name == "SAST":
         manual_section = f"""
         <h2>1.1 Requisitos del Manual (SAST)</h2>
-        <ul>
+        <ul class="avoid-break">
             <li><strong>Análisis de código fuente:</strong> Realizado vía escaneo estático.</li>
             <li><strong>Componente evaluado:</strong> {html.escape(code_path)}</li>
         </ul>
@@ -290,7 +290,7 @@ def build_html_report(name, url, code_path, report_data):
     elif type_name == "SCA":
         manual_section = f"""
         <h2>1.1 Requisitos del Manual (SCA)</h2>
-        <ul>
+        <ul class="avoid-break">
             <li><strong>Dependencias evaluadas:</strong> Node.js / PHP.</li>
             <li><strong>Componente evaluado:</strong> {html.escape(code_path)}</li>
         </ul>
@@ -298,7 +298,7 @@ def build_html_report(name, url, code_path, report_data):
     elif type_name == "DAST":
         manual_section = f"""
         <h2>1.1 Requisitos del Manual (DAST)</h2>
-        <ul>
+        <ul class="avoid-break">
             <li><strong>Servicios en ejecución y Endpoints:</strong> Auditados vía spidering.</li>
             <li><strong>URL Evaluada:</strong> {html.escape(url)}</li>
             <li><strong>Limitaciones:</strong> Análisis sin autenticación pre-configurada.</li>
@@ -322,13 +322,37 @@ def build_html_report(name, url, code_path, report_data):
         .severity-high {{ color: #c0392b; font-weight: bold; }}
         .severity-medium {{ color: #d35400; font-weight: bold; }}
         .severity-low {{ color: #f39c12; font-weight: bold; }}
+        .print-btn {{
+            display: inline-block;
+            background-color: #3498db;
+            color: #fff;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            cursor: pointer;
+            border: none;
+            font-size: 16px;
+        }}
+        .print-btn:hover {{ background-color: #2980b9; }}
+        @media print {{
+            body {{ padding: 0; background-color: #fff; color: #000; margin: 20px; }}
+            .print-btn {{ display: none; }}
+            .finding {{ border-left: 5px solid #000; background: #fff; }}
+            h1, h2, th, td, p, span {{ color: #000 !important; }}
+            table, th, td {{ border-color: #000; }}
+            .avoid-break {{ page-break-inside: avoid; }}
+        }}
     </style>
 </head>
 <body>
+    <button class="print-btn" onclick="window.print()">🖨 Imprimir / Guardar como PDF</button>
+
     <h1>Evidencia de Seguridad: {type_name}</h1>
     
     <h2>1. Información del Análisis</h2>
-    <table>
+    <table class="avoid-break">
         <tr><th>Instancia Evaluada</th><td>{html.escape(name)}</td></tr>
         <tr><th>Fecha de Ejecución</th><td>{date_str}</td></tr>
         <tr><th>Herramienta Intentada</th><td>{html.escape(report_data['tool'])}</td></tr>
@@ -361,50 +385,62 @@ def build_summary_html(name, date_str, sast_res, sca_res, dast_res):
         table {{ width: 100%; border-collapse: collapse; margin-top: 15px; }}
         th, td {{ border: 1px solid #ddd; padding: 12px; text-align: left; }}
         th {{ background-color: #ecf0f1; color: #2c3e50; }}
+        .print-btn {{
+            display: inline-block;
+            background-color: #3498db;
+            color: #fff;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            cursor: pointer;
+            border: none;
+            font-size: 16px;
+        }}
+        .print-btn:hover {{ background-color: #2980b9; }}
+        @media print {{
+            body {{ padding: 0; background-color: #fff; color: #000; margin: 20px; }}
+            .print-btn {{ display: none; }}
+            h1, h2, th, td, p, span {{ color: #000 !important; }}
+            table, th, td {{ border-color: #000; }}
+            .avoid-break {{ page-break-inside: avoid; }}
+        }}
     </style>
 </head>
 <body>
+    <button class="print-btn" onclick="window.print()">🖨 Imprimir / Guardar como PDF</button>
+
     <h1>Resumen de Evidencia de Seguridad</h1>
     <p><strong>Instancia:</strong> {html.escape(name)}</p>
     <p><strong>Fecha de Generación:</strong> {date_str}</p>
     
     <h2>Estados de Ejecución</h2>
-    <table>
+    <table class="avoid-break">
         <tr><th>Prueba</th><th>Herramienta</th><th>Estado</th><th>Hallazgos/Notas</th></tr>
         <tr><td>SAST</td><td>{html.escape(sast_res['tool'])}</td><td>{sast_res['status']}</td><td>{len(sast_res['findings'])}</td></tr>
         <tr><td>SCA</td><td>{html.escape(sca_res['tool'])}</td><td>{sca_res['status']}</td><td>{len(sca_res['findings'])}</td></tr>
         <tr><td>DAST</td><td>{html.escape(dast_res['tool'])}</td><td>{dast_res['status']}</td><td>{len(dast_res['findings'])}</td></tr>
     </table>
     
-    <p style="margin-top: 40px;"><em>Esta hoja sirve como carátula para la entrega de la evidencia en PDF, certificando la intención de ejecución según el manual del Gobierno, reportando las fallas técnicas o limitaciones si existieran.</em></p>
+    <p style="margin-top: 40px;" class="avoid-break"><em>Esta hoja sirve como carátula para la entrega de la evidencia en formato físico o digital (PDF), certificando la intención de ejecución según el manual del Gobierno, reportando las fallas técnicas o limitaciones si existieran.</em></p>
 </body>
 </html>
 """
     return template
 
-def save_and_pdf(out_dir, base_name, html_content, json_data):
+def save_data(out_dir, base_name, html_content, json_data):
     html_path = os.path.join(out_dir, f"{base_name}.html")
-    pdf_path = os.path.join(out_dir, f"{base_name}.pdf")
     json_path = os.path.join(out_dir, f"{base_name}.json")
     
     with open(html_path, "w", encoding="utf-8") as f:
         f.write(html_content)
         
-    if json_data:
+    if json_data is not None:
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(json_data, f, indent=2, ensure_ascii=False)
             
-    print(f"Generando PDF para {base_name}...")
-    try:
-        from weasyprint import HTML
-        HTML(string=html_content).write_pdf(pdf_path)
-        print(f"  PDF generado: {pdf_path}")
-    except ImportError:
-        print(f"  [!] WeasyPrint no está instalado. El PDF no se generó.")
-        print(f"  [!] Ejecuta 'pip install -r requirements.txt' para habilitar la generación de PDF.")
-        print(f"  [!] El HTML sigue disponible en: {html_path}")
-    except Exception as e:
-        print(f"  [!] Error al generar PDF con WeasyPrint: {e}")
+    print(f"  -> Guardado: {html_path}")
 
 def main():
     parser = argparse.ArgumentParser(description="Security Runner Standalone")
@@ -412,6 +448,7 @@ def main():
     parser.add_argument("--code", required=True, help="Ruta absoluta al código fuente")
     parser.add_argument("--url", required=True, help="URL de la instancia")
     parser.add_argument("--output", default="evidencias", help="Ruta de salida (default: evidencias)")
+    parser.add_argument("--type", default="ALL", choices=["SAST", "SCA", "DAST", "ALL"], help="Prueba específica a ejecutar")
     
     args = parser.parse_args()
     
@@ -423,30 +460,38 @@ def main():
     print(f"Código    : {args.code}")
     print(f"URL       : {args.url}")
     print(f"Salida    : {out_dir}")
+    print(f"Tipo      : {args.type}")
     print(f"====================================\n")
     
+    sast_res = {"tool": "N/A", "status": "No Ejecutado", "findings": []}
+    sca_res = {"tool": "N/A", "status": "No Ejecutado", "findings": []}
+    dast_res = {"tool": "N/A", "status": "No Ejecutado", "findings": []}
+
     # SAST
-    sast_res = run_sast(args.code)
-    sast_html = build_html_report(args.name, args.url, args.code, sast_res)
-    save_and_pdf(out_dir, "SAST", sast_html, sast_res)
+    if args.type in ["SAST", "ALL"]:
+        sast_res = run_sast(args.code)
+        sast_html = build_html_report(args.name, args.url, args.code, sast_res)
+        save_data(out_dir, "SAST", sast_html, sast_res)
     
     # SCA
-    sca_res = run_sca(args.code)
-    sca_html = build_html_report(args.name, args.url, args.code, sca_res)
-    save_and_pdf(out_dir, "SCA", sca_html, sca_res)
+    if args.type in ["SCA", "ALL"]:
+        sca_res = run_sca(args.code)
+        sca_html = build_html_report(args.name, args.url, args.code, sca_res)
+        save_data(out_dir, "SCA", sca_html, sca_res)
     
     # DAST
-    dast_res = run_dast(args.url)
-    dast_html = build_html_report(args.name, args.url, args.code, dast_res)
-    save_and_pdf(out_dir, "DAST", dast_html, dast_res)
+    if args.type in ["DAST", "ALL"]:
+        dast_res = run_dast(args.url)
+        dast_html = build_html_report(args.name, args.url, args.code, dast_res)
+        save_data(out_dir, "DAST", dast_html, dast_res)
     
-    # Resumen
+    # Resumen (se genera en todos los casos para mantener la trazabilidad de lo ejecutado vs omitido)
     print(">> Generando Resumen...")
     date_str = get_current_time()
     summary_html = build_summary_html(args.name, date_str, sast_res, sca_res, dast_res)
-    save_and_pdf(out_dir, "RESUMEN_EVIDENCIA", summary_html, None)
+    save_data(out_dir, "RESUMEN_EVIDENCIA", summary_html, None)
     
-    print("\n[✔] Evidencia recolectada y generada en:", out_dir)
+    print("\n[✔] Evidencia recolectada exitosamente en:", out_dir)
 
 if __name__ == "__main__":
     main()

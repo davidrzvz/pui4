@@ -128,36 +128,29 @@
             const data = await res.json();
             
             if (data.success) {
-                const results = Array.isArray(data.data) ? data.data : [data.data];
-                
                 let html = `<div class="alert alert-success">
-                    <h4 class="alert-heading"><i class="bi bi-check-circle-fill"></i> Análisis ${type === 'all' ? 'Completo' : type.toUpperCase()} Finalizado</h4>
-                    <hr>`;
-                    
-                results.forEach(r => {
-                    html += `
-                    <div class="row mb-3 border-bottom pb-2">
-                        <div class="col-12"><h5 class="text-primary">${r.type}</h5></div>
-                        <div class="col-md-6">
-                            <p class="mb-1"><strong>Herramienta:</strong> ${r.tool}</p>
-                            <p class="mb-1"><strong>Duración:</strong> ${r.duration}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p class="mb-1"><strong>Estado:</strong> ${r.status}</p>
-                            <p class="mb-1"><strong>Hallazgos:</strong> <span class="badge ${r.findings.length > 0 ? 'bg-danger' : 'bg-success'}">${r.findings.length}</span></p>
-                        </div>
+                    <h4 class="alert-heading"><i class="bi bi-check-circle-fill"></i> Análisis Finalizado</h4>
+                    <p>${data.message}</p>
+                    <hr>
+                    <div class="row">
                         <div class="col-12 mt-2">
-                            <a href="/security/api/download/pdf/${r.reportId}" target="_blank" class="btn btn-danger btn-sm me-2">
-                                <i class="bi bi-file-earmark-pdf-fill"></i> Descargar PDF
-                            </a>
-                            <a href="/security/api/download/html/${r.reportId}" target="_blank" class="btn btn-info btn-sm text-white">
-                                <i class="bi bi-filetype-html"></i> Descargar HTML
-                            </a>
-                        </div>
-                    </div>`;
-                });
+                            <h5 class="text-primary mb-3">Evidencia Generada (HTML + PDF):</h5>`;
                 
-                html += `</div>`;
+                if (data.links) {
+                    if (data.links.SAST) html += `<a href="${data.links.SAST}" target="_blank" class="btn btn-info btn-sm text-white me-2 mb-2"><i class="bi bi-filetype-html"></i> SAST</a>`;
+                    if (data.links.SCA) html += `<a href="${data.links.SCA}" target="_blank" class="btn btn-info btn-sm text-white me-2 mb-2"><i class="bi bi-filetype-html"></i> SCA</a>`;
+                    if (data.links.DAST) html += `<a href="${data.links.DAST}" target="_blank" class="btn btn-info btn-sm text-white me-2 mb-2"><i class="bi bi-filetype-html"></i> DAST</a>`;
+                    if (data.links.RESUMEN) html += `<a href="${data.links.RESUMEN}" target="_blank" class="btn btn-primary btn-sm text-white me-2 mb-2"><i class="bi bi-filetype-html"></i> Resumen de Evidencia</a>`;
+                }
+
+                html += `
+                        </div>
+                        <div class="col-12 mt-3">
+                            <h6>Logs del Runner (Terminal)</h6>
+                            <pre class="bg-dark text-light p-3 rounded" style="font-size: 0.75rem; max-height: 250px; overflow-y: auto;">${data.stdout}</pre>
+                        </div>
+                    </div></div>`;
+                
                 resultDiv.innerHTML = html;
                 loadHistory();
             } else {
