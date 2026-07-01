@@ -59,12 +59,17 @@ router.post('/api/execute/:type/:instanceId', (req, res) => {
             // Determinar rutas de archivos generados
             const instanceOutDir = path.join(outDir, instance.rfc);
             
-            const htmlLinks = {
-                SAST: `/security/api/download/html/file?path=${encodeURIComponent(path.join(instanceOutDir, 'SAST.html'))}`,
-                SCA: `/security/api/download/html/file?path=${encodeURIComponent(path.join(instanceOutDir, 'SCA.html'))}`,
-                DAST: `/security/api/download/html/file?path=${encodeURIComponent(path.join(instanceOutDir, 'DAST.html'))}`,
-                RESUMEN: `/security/api/download/html/file?path=${encodeURIComponent(path.join(instanceOutDir, 'RESUMEN_EVIDENCIA.html'))}`
-            };
+            const htmlLinks = {};
+            if (type === 'SAST' || type === 'ALL') {
+                htmlLinks.SAST = `/security/api/download/html/file?path=${encodeURIComponent(path.join(instanceOutDir, 'SAST.html'))}`;
+            }
+            if (type === 'SCA' || type === 'ALL') {
+                htmlLinks.SCA = `/security/api/download/html/file?path=${encodeURIComponent(path.join(instanceOutDir, 'SCA.html'))}`;
+            }
+            if (type === 'DAST' || type === 'ALL') {
+                htmlLinks.DAST = `/security/api/download/html/file?path=${encodeURIComponent(path.join(instanceOutDir, 'DAST.html'))}`;
+            }
+            htmlLinks.RESUMEN = `/security/api/download/html/file?path=${encodeURIComponent(path.join(instanceOutDir, 'RESUMEN_EVIDENCIA.html'))}`;
 
             // Simular respuesta compatible con el front
             res.json({ 
