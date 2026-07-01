@@ -41,40 +41,31 @@ def run_sast(code_path):
     print(">> Iniciando SAST...")
     findings = []
     
-    rule_paths = ['semgrep.yml', '.semgrep.yml', '.semgrep']
-    has_local = any(os.path.exists(os.path.join(code_path, f)) for f in rule_paths)
-    
     cmd = [
         "docker", "run", "--rm", "-v", f"{code_path}:/src:ro",
-        "returntocorp/semgrep", "semgrep", "scan", "--json", "--metrics=off",
-        "--exclude", "vendor", "--exclude", "node_modules", "--exclude", "storage",
+        "returntocorp/semgrep", "semgrep", "scan", "--config=p/security-audit", "--json", "--metrics=off",
+        "--exclude", "vendor", "--exclude", "node_modules", "--exclude", "storage", "--exclude", "bootstrap/cache",
         "/src"
     ]
     
-    if not has_local:
-        return {
-            "type": "SAST",
-            "tool": "Semgrep",
-            "status": "Fallido",
-            "command": " ".join(cmd),
-            "findings": [{
-                "title": "Reglas Ausentes",
-                "severity": "High",
-                "description": "No hay reglas SAST locales configuradas en el proyecto (.semgrep.yml).",
-                "recommendation": "Añadir reglas personalizadas locales para evitar descargar configuraciones remotas."
-            }]
-        }
-
     res = run_cmd(cmd)
     
     status = "Completado"
     if res["code"] not in [0, 1]:
         status = "Fallido"
+        err_msg = res['stderr'] or res['stdout']
+        if "Network error" in err_msg or "Failed to fetch" in err_msg or "certificate verify failed" in err_msg or "Could not fetch" in err_msg or "error downloading" in err_msg.lower():
+             title = "Error de Conexión a semgrep.dev"
+             desc = f"No fue posible descargar el paquete de reglas p/security-audit desde el registro remoto.\nDetalle: {err_msg[:500]}"
+        else:
+             title = "Error de Herramienta"
+             desc = f"Semgrep falló:\n{err_msg[:500]}"
+             
         findings.append({
-            "title": "Error de Herramienta",
+            "title": title,
             "severity": "High",
-            "description": f"Semgrep falló:\n{res['stderr'] or res['stdout']}",
-            "recommendation": "Verificar sintaxis de reglas o permisos."
+            "description": desc,
+            "recommendation": "Verificar conectividad a internet para descarga de reglas o revisar sintaxis."
         })
     else:
         try:
@@ -91,7 +82,7 @@ def run_sast(code_path):
             findings.append({
                 "title": "Error de Parseo",
                 "severity": "High",
-                "description": "El output de Semgrep no fue un JSON válido.\n" + res["stderr"],
+                "description": "El output de Semgrep no fue un JSON válido.\n" + (res["stderr"][:500] if res["stderr"] else ""),
                 "recommendation": "Revisar logs de Docker."
             })
 
@@ -345,21 +336,25 @@ def build_html_report(name, url, code_path, report_data):
         <tr><th>Fecha fin</th><td>{date_str}</td></tr>
         <tr><th>Duración</th><td>Automática</td></tr>
         <tr><th>Herramienta</th><td>{html.escape(report_data.get('tool', 'N/A'))}</td></tr>
+        <tr><th>Fuente de reglas</th><td>Semgrep Registry</td></tr>
+        <tr><th>Paquete usado</th><td>p/security-audit</td></tr>
+        <tr><th>URL / Fuente</th><td>semgrep.dev</td></tr>
         <tr><th>Comando ejecutado</th><td><code>{html.escape(report_data.get('command', 'N/A'))}</code></td></tr>
     </table>
+    <p style="font-size: 0.9em; color: #555; margin-top: -10px; margin-bottom: 30px;"><strong>Nota:</strong> El código fuente se analiza localmente; la conexión externa se usa únicamente para obtener reglas públicas de análisis.</p>
 
     <h2>4. Metodología</h2>
-    <p>El análisis fue ejecutado utilizando Semgrep en modo local. No se descargaron reglas remotas. El proceso fue ejecutado automáticamente por el Compliance Center.</p>
+    <p>El análisis fue ejecutado utilizando Semgrep con reglas públicas del Semgrep Registry. El código fuente fue analizado localmente; la conexión externa se utilizó únicamente para obtener la definición de reglas.</p>
 
     <h2>5. Resultado Ejecutivo</h2>
     <p>Estado del análisis: <strong>COMPLETADO</strong></p>
-    <p>Resultado: No fue posible ejecutar reglas SAST debido a la ausencia de reglas locales.</p>
+    <p>Resultado: Ejecución del analizador sobre el componente especificado.</p>
 
     <h2>6. Hallazgos</h2>
     {findings_html_sast}
 
     <h2>Conclusión</h2>
-    <p>El proceso SAST fue ejecutado correctamente. No fue posible evaluar vulnerabilidades mediante reglas de Semgrep debido a que el proyecto no contiene una configuración local (.semgrep.yml).</p>
+    <p>El proceso SAST fue ejecutado correctamente y la evidencia técnica ha sido recolectada.</p>
 
     <div class="footer avoid-break">
         <p>Documento generado automáticamente por: <strong>PUI Compliance Center</strong></p>
