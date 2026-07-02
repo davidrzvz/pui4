@@ -80,12 +80,20 @@ def run_sast(code_path):
     status = "Completado"
     if res["code"] not in [0, 1]:
         err_msg = res['stderr'] or res['stdout']
-        if err_msg.strip().startswith("WARNING") or "WARNING:" in err_msg:
+        
+        warning_patterns = ["WARNING:", "will soon be interpreted", "Semgrepignore v2", "Gitignore specifications", "WARNING"]
+        fatal_patterns = ["Network error", "Failed to fetch", "certificate verify failed", "Could not fetch", "error downloading", "No such file or directory"]
+        
+        is_warning_only = any(p in err_msg for p in warning_patterns)
+        if any(p in err_msg or p.lower() in err_msg.lower() for p in fatal_patterns):
+            is_warning_only = False
+            
+        if is_warning_only:
              status = "Completado"
              title = "Advertencia del Analizador"
-             desc = f"Semgrep emitió advertencias relacionadas con reglas oficiales del repositorio comunitario. Estas advertencias no impiden la ejecución del análisis ni representan una falla del sistema.\nDetalle técnico:\n{err_msg[:500]}"
+             desc = f"Semgrep emitió una advertencia relacionada con reglas comunitarias almacenadas localmente. La advertencia no impide la ejecución del análisis.\n\nDetalle técnico:\n{err_msg[:500]}"
              severity = "Informativa"
-             recommendation = "Revisar periódicamente la versión local del repositorio de reglas Semgrep Community Rules."
+             recommendation = "Revisar periódicamente la versión local del repositorio Semgrep Community Rules."
              findings.append({
                  "title": title,
                  "severity": severity,
@@ -342,6 +350,7 @@ def build_html_report(name, url, code_path, report_data):
         .severity-high {{ color: #c0392b; font-weight: bold; }}
         .severity-medium {{ color: #d35400; font-weight: bold; }}
         .severity-low {{ color: #f39c12; font-weight: bold; }}
+        .severity-informativa {{ color: #7f8c8d; font-weight: bold; }}
         .print-btn {{
             display: inline-block; background-color: #3498db; color: #fff; padding: 10px 20px;
             text-decoration: none; border-radius: 5px; font-weight: bold; margin-bottom: 20px;
@@ -480,6 +489,7 @@ def build_html_report(name, url, code_path, report_data):
         .severity-high {{ color: #c0392b; font-weight: bold; }}
         .severity-medium {{ color: #d35400; font-weight: bold; }}
         .severity-low {{ color: #f39c12; font-weight: bold; }}
+        .severity-informativa {{ color: #7f8c8d; font-weight: bold; }}
         .print-btn {{
             display: inline-block;
             background-color: #3498db;
