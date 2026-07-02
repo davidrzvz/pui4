@@ -79,6 +79,7 @@ def run_sast(code_path):
     res = run_cmd(cmd)
     
     status = "Completado"
+    notes = []
     if res["code"] not in [0, 1]:
         err_msg = res['stderr'] or res['stdout']
         
@@ -91,16 +92,7 @@ def run_sast(code_path):
             
         if is_warning_only:
              status = "Completado"
-             title = "Advertencia del Analizador"
-             desc = f"Semgrep emitió una advertencia relacionada con reglas comunitarias almacenadas localmente. La advertencia no impide la ejecución del análisis.\n\nDetalle técnico:\n{err_msg[:500]}"
-             severity = "Informativa"
-             recommendation = "Revisar periódicamente la versión local del repositorio Semgrep Community Rules."
-             findings.append({
-                 "title": title,
-                 "severity": severity,
-                 "description": desc,
-                 "recommendation": recommendation
-             })
+             notes.append(err_msg.strip())
              # Intentar parsear stdout por si generó JSON a pesar del warning
              if res["stdout"].strip().startswith("{"):
                  try:
@@ -155,7 +147,8 @@ def run_sast(code_path):
         "tool": "Semgrep",
         "status": status,
         "command": res["cmd"],
-        "findings": findings
+        "findings": findings,
+        "notes": notes
     }
 
 def extract_dependencies(code_path):
@@ -333,6 +326,14 @@ def build_html_report(name, url, code_path, report_data):
                 </div>
                 """
         
+        notas_html = ""
+        notes = report_data.get("notes", [])
+        if notes:
+            notas_html = "<h2>Notas técnicas del analizador</h2><ul>"
+            for n in notes:
+                notas_html += f"<li><pre style='white-space: pre-wrap; font-family: inherit; font-size: 0.9em; background: #f9f9f9; padding: 10px; border: 1px solid #ddd; border-radius: 4px;'>{html.escape(n)}</pre></li>"
+            notas_html += "</ul>"
+        
         return f"""<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -344,10 +345,10 @@ def build_html_report(name, url, code_path, report_data):
         .subtitle {{ font-size: 1.5em; color: #7f8c8d; margin-bottom: 30px; font-weight: bold; }}
         h2 {{ color: #2980b9; margin-top: 40px; border-bottom: 1px solid #bdc3c7; padding-bottom: 5px; }}
         table {{ width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 20px; }}
-        th, td {{ border: 1px solid #ddd; padding: 12px; text-align: left; }}
-        th {{ background-color: #ecf0f1; color: #2c3e50; width: 30%; }}
-        .finding {{ background: #f9f9f9; padding: 20px; border-left: 5px solid #e74c3c; margin-bottom: 20px; page-break-inside: avoid; }}
-        .finding h3 {{ margin-top: 0; color: #e74c3c; border-bottom: 1px solid #eee; padding-bottom: 10px; }}
+        th, td {{ border: 1px solid #bdc3c7; padding: 12px; text-align: left; }}
+        th {{ background-color: #ecf0f1; width: 30%; color: #2c3e50; }}
+        .finding {{ background-color: #fcfcfc; border: 1px solid #e0e0e0; border-left: 5px solid #3498db; padding: 15px; margin-bottom: 20px; border-radius: 3px; }}
+        .finding h3 {{ margin-top: 0; color: #2c3e50; font-size: 1.2em; }}
         .severity-high {{ color: #c0392b; font-weight: bold; }}
         .severity-medium {{ color: #d35400; font-weight: bold; }}
         .severity-low {{ color: #f39c12; font-weight: bold; }}
@@ -362,9 +363,6 @@ def build_html_report(name, url, code_path, report_data):
         @media print {{
             body {{ padding: 0; background-color: #fff; color: #000; margin: 20px; }}
             .print-btn {{ display: none; }}
-            .finding {{ border-left: 2px solid #000; background: #fff; border: 1px solid #ccc; }}
-            h1, h2, th, td, p, span, .subtitle, .footer {{ color: #000 !important; }}
-            table, th, td {{ border-color: #000; }}
             .avoid-break {{ page-break-inside: avoid; }}
         }}
     </style>
@@ -416,6 +414,7 @@ def build_html_report(name, url, code_path, report_data):
 
     <h2>6. Hallazgos</h2>
     {findings_html_sast}
+    {notas_html}
 
     <h2>Conclusión</h2>
     <p>El proceso SAST fue ejecutado correctamente y la evidencia técnica ha sido recolectada.</p>
