@@ -41,7 +41,7 @@ def run_sast(code_path):
     print(">> Iniciando SAST...")
     findings = []
     
-    host_rules_path = os.path.join(os.getcwd(), 'security-rules')
+    host_rules_path = "/home/aplicaciones/pui/base/pui-platform/manager/security-rules"
     
     # Diagnóstico solicitado
     print("os.getcwd():", os.getcwd())
