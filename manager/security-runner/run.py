@@ -56,6 +56,8 @@ def run_sast(code_path):
     else:
         print("El directorio de reglas no existe en el host.")
 
+    print(">> Reglas utilizadas:\n   /rules/php\n   /rules/javascript\n   /rules/typescript\n   /rules/yaml\n   /rules/dockerfile\n   /rules/generic")
+
     cmd = [
         "docker", "run", "--rm", 
         "--entrypoint", "sh",
@@ -66,9 +68,8 @@ def run_sast(code_path):
         "--config=/rules/php "
         "--config=/rules/javascript "
         "--config=/rules/typescript "
-        "--config=/rules/dockerfile "
         "--config=/rules/yaml "
-        "--config=/rules/json "
+        "--config=/rules/dockerfile "
         "--config=/rules/generic "
         "--json --metrics=off "
         "--exclude vendor --exclude node_modules --exclude storage --exclude bootstrap/cache "
@@ -401,7 +402,7 @@ def build_html_report(name, url, code_path, report_data):
         <tr><th>Duración</th><td>Automática</td></tr>
         <tr><th>Herramienta</th><td>{html.escape(report_data.get('tool', 'N/A'))}</td></tr>
         <tr><th>Fuente de reglas</th><td>Semgrep Community Rules almacenadas localmente.</td></tr>
-        <tr><th>Paquetes utilizados</th><td>php, javascript, typescript, dockerfile, yaml, json, generic</td></tr>
+        <tr><th>Paquetes utilizados</th><td>php, javascript, typescript, dockerfile, yaml, generic</td></tr>
         <tr><th>Ruta base</th><td>/app/security-rules</td></tr>
         <tr><th>Comando ejecutado</th><td><code>{html.escape(report_data.get('command', 'N/A'))}</code></td></tr>
     </table>
