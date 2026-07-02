@@ -4,6 +4,7 @@ import json
 import os
 import datetime
 import html
+import time
 
 def get_current_time():
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -39,9 +40,30 @@ def run_cmd(cmd_list, timeout=120, cwd=None):
 
 def run_sast(code_path):
     print(">> Iniciando SAST...")
+    start_time = time.time()
     findings = []
     
     host_rules_path = "/home/aplicaciones/pui/base/pui-platform/manager/security-rules"
+    
+    # Calcular archivos analizados
+    files_count = 0
+    for root, dirs, files in os.walk(code_path):
+        if 'vendor' in dirs: dirs.remove('vendor')
+        if 'node_modules' in dirs: dirs.remove('node_modules')
+        if 'storage' in dirs: dirs.remove('storage')
+        if 'cache' in dirs and os.path.basename(root) == 'bootstrap': dirs.remove('cache')
+        for f in files:
+            if f.endswith(('.php', '.js', '.ts', '.json', '.yaml', '.yml')) or f == 'Dockerfile':
+                files_count += 1
+                
+    # Calcular reglas cargadas
+    rules_count = 0
+    local_rules_path = "/app/security-rules"
+    if os.path.exists(local_rules_path):
+        for root, dirs, files in os.walk(local_rules_path):
+            for f in files:
+                if f.endswith(('.yml', '.yaml')):
+                    rules_count += 1
     
     # Diagnóstico solicitado
     print("os.getcwd():", os.getcwd())
@@ -142,13 +164,17 @@ def run_sast(code_path):
                 "recommendation": "Revisar logs de Docker."
             })
 
+    exec_time = round(time.time() - start_time, 1)
     return {
         "type": "SAST",
         "tool": "Semgrep",
         "status": status,
         "command": res["cmd"],
         "findings": findings,
-        "notes": notes
+        "notes": notes,
+        "files_count": files_count,
+        "rules_count": rules_count,
+        "exec_time": exec_time
     }
 
 def extract_dependencies(code_path):
@@ -309,6 +335,7 @@ def run_dast(url):
 def build_html_report(name, url, code_path, report_data):
     date_str = get_current_time()
     type_name = report_data["type"]
+    company_name = "Financiera Cyborg, S.A.P.I. de C.V., SOFOM, E.N.R." if name == "FCY2109104G4" else "No disponible"
     
     if type_name == "SAST":
         findings_html_sast = ""
@@ -375,7 +402,7 @@ def build_html_report(name, url, code_path, report_data):
     <div class="subtitle">Análisis Estático de Código Fuente (SAST)</div>
     
     <table class="avoid-break">
-        <tr><th>Empresa</th><td>No disponible</td></tr>
+        <tr><th>Empresa</th><td>{html.escape(company_name)}</td></tr>
         <tr><th>RFC</th><td>{html.escape(name)}</td></tr>
         <tr><th>Plataforma</th><td>Plataforma Única de Identificación (PUI)</td></tr>
         <tr><th>Módulo</th><td>Compliance Center</td></tr>
@@ -389,7 +416,7 @@ def build_html_report(name, url, code_path, report_data):
 
     <h2>2. Alcance</h2>
     <table class="avoid-break">
-        <tr><th>Aplicación analizada</th><td>Cliente {html.escape(name)}</td></tr>
+        <tr><th>Empresa analizada</th><td>{html.escape(company_name)}</td></tr>
         <tr><th>Tecnología detectada</th><td>PHP, JavaScript, Laravel</td></tr>
         <tr><th>Directorios excluidos</th><td>vendor, node_modules, storage, bootstrap/cache</td></tr>
     </table>
@@ -408,9 +435,11 @@ def build_html_report(name, url, code_path, report_data):
     <h2>5. Resumen Ejecutivo</h2>
     <table class="avoid-break">
         <tr><th>Métrica</th><th>Resultado</th></tr>
-        <tr><td>Archivos analizados</td><td>N/D</td></tr>
-        <tr><td>Reglas ejecutadas</td><td>N/D</td></tr>
+        <tr><td>Archivos analizados</td><td>{report_data.get('files_count', 'N/D')}</td></tr>
+        <tr><td>Reglas cargadas</td><td>{report_data.get('rules_count', 'N/D')}</td></tr>
         <tr><td>Hallazgos reportables</td><td>{len(report_data.get('findings', []))}</td></tr>
+        <tr><td>Advertencias del analizador</td><td>{len(report_data.get('notes', []))}</td></tr>
+        <tr><td>Tiempo de ejecución</td><td>{report_data.get('exec_time', '0.0')} segundos</td></tr>
         <tr><td>Estado</td><td>{html.escape(report_data.get('status', 'COMPLETADO'))}</td></tr>
     </table>
 
